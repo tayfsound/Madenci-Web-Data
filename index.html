@@ -249,8 +249,12 @@
                                     Yalnızca birini de doldurabilirsin, ikisini birden de. Boş bıraktığın için kayıt açılmaz.
                                 </div>
                                 <div class="sm:col-span-2">
-                                    <label class="block text-sm text-slate-400 mb-1">Vardiya / Saat Notu</label>
-                                    <input type="text" id="o_shift" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: Saat 14.00-03.00">
+                                    <label class="block text-sm text-slate-400 mb-1">Vardiya</label>
+                                    <select id="o_shift" class="input-dark w-full px-3 py-2 rounded-lg">
+                                        <option value="">Seç</option>
+                                        <option value="gunduz">Gündüz</option>
+                                        <option value="gece">Gece</option>
+                                    </select>
                                 </div>
                             </div>
                             <button onclick="submitEntry('ore')" class="w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
@@ -686,6 +690,10 @@
             return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t;
         }
 
+        function shiftLabel(s) {
+            return { gunduz: 'Gündüz', gece: 'Gece' }[s] || s;
+        }
+
         function getBorderColor(type) {
             return { drilling: 'border-blue-500', material: 'border-green-500', ore: 'border-orange-500' }[type] || 'border-slate-500';
         }
@@ -694,7 +702,7 @@
             const d = entry.details;
             if (entry.entry_type === 'drilling') return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
             if (entry.entry_type === 'material') return `${d.name}: ${d.quantity} ${d.unit} | ${d.category}`;
-            if (entry.entry_type === 'ore') return `${oreTypeLabel(d.type)} ${d.quantity} ${d.direction} | ${d.shift || ''}`;
+            if (entry.entry_type === 'ore') return `${oreTypeLabel(d.type)} ${d.quantity} ${d.direction} | ${d.shift ? shiftLabel(d.shift) : ''}`;
             return JSON.stringify(d);
         }
 
