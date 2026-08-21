@@ -174,11 +174,15 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Kategori</label>
-                                    <input type="text" id="m_category" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: ayna, tavan, baypas">
+                                    <select id="m_category" class="input-dark w-full px-3 py-2 rounded-lg" onchange="updateMaterialOptions()">
+                                        <option value="">Seç</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Malzeme Adı</label>
-                                    <input type="text" id="m_name" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: Daynex, Amonex, Up, Kapsül">
+                                    <select id="m_name" class="input-dark w-full px-3 py-2 rounded-lg">
+                                        <option value="">Kategori seç</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Miktar</label>
@@ -339,6 +343,40 @@
                     </div>
                     <div id="adminSummary" class="mt-6 grid sm:grid-cols-3 gap-4"></div>
                 </div>
+
+                <!-- Kategori & Malzeme Yönetimi -->
+                <div class="glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-cogs mr-2 text-blue-400"></i>Kategori & Malzeme Yönetimi</h3>
+                    
+                    <div class="grid sm:grid-cols-2 gap-6">
+                        <!-- Kategoriler -->
+                        <div>
+                            <h4 class="font-semibold text-blue-300 mb-3">Kategoriler</h4>
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" id="newCategoryName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="Yeni kategori">
+                                <button onclick="addCategory()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div id="categoriesList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+
+                        <!-- Malzemeler -->
+                        <div>
+                            <h4 class="font-semibold text-green-300 mb-3">Malzemeler</h4>
+                            <div class="space-y-2 mb-4">
+                                <select id="materialCategorySelect" class="input-dark w-full px-3 py-2 rounded-lg text-sm" onchange="loadMaterialsList()">
+                                    <option value="">Kategori seç</option>
+                                </select>
+                                <input type="text" id="newMaterialName" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adı">
+                                <button onclick="addMaterial()" class="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium">
+                                    <i class="fas fa-plus mr-1"></i>Ekle
+                                </button>
+                            </div>
+                            <div id="materialsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -400,6 +438,50 @@
             location.reload();
         }
 
+        // ==================== KATEGORILER & MALZEMELER ====================
+        let categories = [];
+        let materialsByCategory = {};
+
+        async function loadCategoriesAndMaterials() {
+            // Kategorileri yükle
+            const { data: cats } = await db.from('categories').select('*').order('name');
+            if (cats) {
+                categories = cats;
+                const select = document.getElementById('m_category');
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    select.appendChild(opt);
+                });
+            }
+            
+            // Malzemeleri kategori başına grupla
+            const { data: mats } = await db.from('materials').select('*').order('name');
+            if (mats) {
+                materialsByCategory = {};
+                mats.forEach(mat => {
+                    if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = [];
+                    materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name });
+                });
+            }
+        }
+
+        function updateMaterialOptions() {
+            const catId = document.getElementById('m_category').value;
+            const select = document.getElementById('m_name');
+            select.innerHTML = '<option value="">Seç</option>';
+            
+            if (catId && materialsByCategory[catId]) {
+                materialsByCategory[catId].forEach(mat => {
+                    const opt = document.createElement('option');
+                    opt.value = mat.id;
+                    opt.textContent = mat.name;
+                    select.appendChild(opt);
+                });
+            }
+        }
+
         // ==================== APP INIT ====================
         async function initApp() {
             const { data: { session } } = await db.auth.getSession();
@@ -415,6 +497,9 @@
                     isAdmin = true;
                     document.getElementById('adminBtn').classList.remove('hidden');
                 }
+                
+                // Kategoriler ve malzemeleri yükle
+                await loadCategoriesAndMaterials();
                 
                 // Set default dates
                 const today = new Date().toISOString().split('T')[0];
@@ -438,7 +523,18 @@
             document.getElementById(section + 'Section').classList.remove('hidden');
             
             if (section === 'myReports') loadMyReports();
-            if (section === 'admin') loadAdminData();
+            if (section === 'admin') {
+                loadAdminData();
+                loadCategoriesList();
+                // Malzeme yönetim dropdown'unu da doldur
+                const select = document.getElementById('materialCategorySelect');
+                categories.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    select.appendChild(opt);
+                });
+            }
         }
 
         function setTab(tab) {
@@ -466,11 +562,15 @@
                     holes: document.getElementById('d_holes').value
                 };
             } else if (type === 'material') {
+                const catSelect = document.getElementById('m_category');
+                const nameSelect = document.getElementById('m_name');
                 data.date = document.getElementById('m_date').value;
                 data.location = document.getElementById('m_location').value;
                 data.details = {
-                    category: document.getElementById('m_category').value,
-                    name: document.getElementById('m_name').value,
+                    category: catSelect.options[catSelect.selectedIndex].text,
+                    category_id: catSelect.value,
+                    name: nameSelect.options[nameSelect.selectedIndex].text,
+                    material_id: nameSelect.value,
                     quantity: document.getElementById('m_qty').value,
                     unit: document.getElementById('m_unit').value
                 };
@@ -692,6 +792,111 @@
 
         function shiftLabel(s) {
             return { gunduz: 'Gündüz', gece: 'Gece' }[s] || s;
+        }
+
+        // ==================== KATEGORİ & MALZEME YÖNETİMİ ====================
+        async function loadCategoriesList() {
+            const { data: cats } = await db.from('categories').select('*').order('name');
+            const div = document.getElementById('categoriesList');
+            div.innerHTML = '';
+            if (!cats || cats.length === 0) {
+                div.textContent = 'Kategori yok';
+                return;
+            }
+            cats.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                item.innerHTML = `<span>${cat.name}</span>
+                    <button onclick="deleteCategory('${cat.id}')" class="text-red-400 hover:text-red-300">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>`;
+                div.appendChild(item);
+            });
+        }
+
+        async function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) return alert('Kategori adı giriniz');
+            
+            const { error } = await db.from('categories').insert([{ name }]);
+            if (error) alert('Hata: ' + error.message);
+            else {
+                document.getElementById('newCategoryName').value = '';
+                loadCategoriesList();
+                // Form'daki kategori dropdown'unu güncelle
+                const { data: cats } = await db.from('categories').select('*').order('name');
+                const select = document.getElementById('m_category');
+                const currentVal = select.value;
+                select.innerHTML = '<option value="">Seç</option>';
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    select.appendChild(opt);
+                });
+                select.value = currentVal;
+                // Malzeme yönetiminde de güncelleyelim
+                const manageCatSelect = document.getElementById('materialCategorySelect');
+                manageCatSelect.innerHTML = '<option value="">Kategori seç</option>';
+                cats.forEach(cat => {
+                    const opt = document.createElement('option');
+                    opt.value = cat.id;
+                    opt.textContent = cat.name;
+                    manageCatSelect.appendChild(opt);
+                });
+            }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('Kategoriyi sil? (Malzemeleri de silinecek)')) return;
+            const { error } = await db.from('categories').delete().eq('id', id);
+            if (!error) loadCategoriesList();
+        }
+
+        async function loadMaterialsList() {
+            const catId = document.getElementById('materialCategorySelect').value;
+            const div = document.getElementById('materialsList');
+            if (!catId) {
+                div.innerHTML = '<p class="text-slate-500 text-sm">Kategori seç</p>';
+                return;
+            }
+            
+            const { data: mats } = await db.from('materials').select('*').eq('category_id', catId).order('name');
+            div.innerHTML = '';
+            if (!mats || mats.length === 0) {
+                div.textContent = 'Malzeme yok';
+                return;
+            }
+            mats.forEach(mat => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                item.innerHTML = `<span>${mat.name}</span>
+                    <button onclick="deleteMaterial('${mat.id}')" class="text-red-400 hover:text-red-300">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>`;
+                div.appendChild(item);
+            });
+        }
+
+        async function addMaterial() {
+            const catId = document.getElementById('materialCategorySelect').value;
+            const name = document.getElementById('newMaterialName').value.trim();
+            if (!catId || !name) return alert('Kategori ve malzeme adı gerekli');
+            
+            const { error } = await db.from('materials').insert([{ category_id: catId, name }]);
+            if (error) alert('Hata: ' + error.message);
+            else {
+                document.getElementById('newMaterialName').value = '';
+                loadMaterialsList();
+                // Form'daki malzeme dropdown'unu güncelle
+                await loadCategoriesAndMaterials();
+            }
+        }
+
+        async function deleteMaterial(id) {
+            if (!confirm('Malzemeyi sil?')) return;
+            const { error } = await db.from('materials').delete().eq('id', id);
+            if (!error) loadMaterialsList();
         }
 
         function getBorderColor(type) {
