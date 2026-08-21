@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Günlük Raporlama Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; }
+        .input-dark:focus { outline: none; border-color: #3b82f6; }
+        .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .entry-card { transition: all 0.2s; }
+        .entry-card:hover { transform: translateX(4px); border-left-color: #3b82f6; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- AUTH SCREEN -->
+    <div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass rounded-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <i class="fas fa-hard-hat text-4xl text-blue-500 mb-3"></i>
+                <h1 class="text-2xl font-bold">Günlük Raporlama</h1>
+                <p class="text-slate-400 text-sm mt-1">Madencilik & İmalat Takip Sistemi</p>
+            </div>
+            
+            <div id="loginForm">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="loginEmail" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="ornek@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Şifre</label>
+                        <input type="password" id="loginPassword" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="••••••••">
+                    </div>
+                    <button onclick="handleLogin()" class="btn-primary w-full py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-sign-in-alt mr-2"></i>Giriş Yap
+                    </button>
+                </div>
+                <p class="text-center mt-4 text-sm text-slate-400">
+                    Hesabın yok mu? <button onclick="toggleAuth()" class="text-blue-400 hover:underline">Kayıt Ol</button>
+                </p>
+            </div>
+
+            <div id="registerForm" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Ad Soyad</label>
+                        <input type="text" id="regName" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="Ali Veli">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Email</label>
+                        <input type="email" id="regEmail" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="ornek@email.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Şifre</label>
+                        <input type="password" id="regPassword" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="En az 6 karakter">
+                    </div>
+                    <button onclick="handleRegister()" class="btn-success w-full py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-user-plus mr-2"></i>Kayıt Ol
+                    </button>
+                </div>
+                <p class="text-center mt-4 text-sm text-slate-400">
+                    Zaten hesabın var? <button onclick="toggleAuth()" class="text-blue-400 hover:underline">Giriş Yap</button>
+                </p>
+            </div>
+            <div id="authMessage" class="mt-4 text-center text-sm hidden"></div>
+        </div>
+    </div>
+
+    <!-- MAIN APP -->
+    <div id="appScreen" class="hidden min-h-screen">
+        <!-- Navbar -->
+        <nav class="glass sticky top-0 z-50 border-b border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-hard-hat text-blue-500 text-xl"></i>
+                    <span class="font-bold text-lg hidden sm:inline">Günlük Raporlama</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="userName" class="text-sm text-slate-400 hidden sm:inline"></span>
+                    <button onclick="showSection('dashboard')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Ana Sayfa">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <button onclick="showSection('myReports')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Raporlarım">
+                        <i class="fas fa-list"></i>
+                    </button>
+                    <button id="adminBtn" onclick="showSection('admin')" class="p-2 rounded-lg hover:bg-slate-700 transition hidden" title="Admin Panel">
+                        <i class="fas fa-shield-alt text-yellow-500"></i>
+                    </button>
+                    <button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-red-900/30 text-red-400 transition" title="Çıkış">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <!-- DASHBOARD -->
+            <div id="dashboardSection" class="fade-in">
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <!-- Form Column -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Tabs -->
+                        <div class="glass rounded-xl p-1 flex gap-1 overflow-x-auto">
+                            <button onclick="setTab('drilling')" id="tab-drilling" class="tab-active flex-1 py-3 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition">
+                                <i class="fas fa-bullseye mr-2"></i>Sondaj / Delme
+                            </button>
+                            <button onclick="setTab('material')" id="tab-material" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
+                                <i class="fas fa-boxes mr-2"></i>Malzeme Kullanımı
+                            </button>
+                            <button onclick="setTab('ore')" id="tab-ore" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
+                                <i class="fas fa-dolly mr-2"></i>Cevher / Paşa
+                            </button>
+                        </div>
+
+                        <!-- Drilling Form -->
+                        <div id="form-drilling" class="glass rounded-xl p-6">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <i class="fas fa-bullseye text-blue-400"></i> Sondaj Raporu
+                            </h3>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                                    <input type="date" id="d_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                                    <input type="text" id="d_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 319 ph6">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Metre</label>
+                                    <input type="number" id="d_meter" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 75">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Sıra No</label>
+                                    <input type="text" id="d_row" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 64">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm text-slate-400 mb-1">Delik Sayısı / Not</label>
+                                    <input type="text" id="d_holes" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 6 delik">
+                                </div>
+                            </div>
+                            <button onclick="submitEntry('drilling')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90">
+                                <i class="fas fa-save mr-2"></i>Kaydet
+                            </button>
+                        </div>
+
+                        <!-- Material Form -->
+                        <div id="form-material" class="glass rounded-xl p-6 hidden">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <i class="fas fa-boxes text-green-400"></i> Malzeme Kullanımı
+                            </h3>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                                    <input type="date" id="m_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                                    <input type="text" id="m_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 236 ayna">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Kategori</label>
+                                    <input type="text" id="m_category" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: ayna, tavan, baypas">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Malzeme Adı</label>
+                                    <input type="text" id="m_name" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: Daynex, Amonex, Up, Kapsül">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Miktar</label>
+                                    <input type="number" id="m_qty" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 550">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Birim</label>
+                                    <select id="m_unit" class="input-dark w-full px-3 py-2 rounded-lg">
+                                        <option value="adet">Adet</option>
+                                        <option value="kg">Kg</option>
+                                        <option value="lt">Lt</option>
+                                        <option value="mt">Mt</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button onclick="submitEntry('material')" class="btn-success w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90">
+                                <i class="fas fa-save mr-2"></i>Kaydet
+                            </button>
+                        </div>
+
+                        <!-- Ore Form -->
+                        <div id="form-ore" class="glass rounded-xl p-6 hidden">
+                            <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                                <i class="fas fa-dolly text-orange-400"></i> Cevher / Paşa Hareketi
+                            </h3>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                                    <input type="date" id="o_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                                    <input type="text" id="o_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 319">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Tip</label>
+                                    <select id="o_type" class="input-dark w-full px-3 py-2 rounded-lg">
+                                        <option value="cevher">Cevher</option>
+                                        <option value="pasa">Paşa</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Miktar</label>
+                                    <input type="number" id="o_qty" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 24">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Yön</label>
+                                    <select id="o_direction" class="input-dark w-full px-3 py-2 rounded-lg">
+                                        <option value="iceri">İçeri</option>
+                                        <option value="disari">Dışarı</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Ekipman</label>
+                                    <input type="text" id="o_equip" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: Alimak">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm text-slate-400 mb-1">Vardiya / Saat Notu</label>
+                                    <input type="text" id="o_shift" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: Saat 14.00-03.00">
+                                </div>
+                            </div>
+                            <button onclick="submitEntry('ore')" class="w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                                <i class="fas fa-save mr-2"></i>Kaydet
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="space-y-4">
+                        <div class="glass rounded-xl p-5">
+                            <h4 class="font-semibold mb-3 text-slate-300">Bugün Özet</h4>
+                            <div id="todayStats" class="space-y-2 text-sm">
+                                <div class="flex justify-between"><span class="text-slate-400">Sondaj:</span><span class="font-mono" id="statDrill">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Malzeme:</span><span class="font-mono" id="statMat">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Cevher:</span><span class="font-mono" id="statOre">-</span></div>
+                            </div>
+                        </div>
+                        <div class="glass rounded-xl p-5">
+                            <h4 class="font-semibold mb-3 text-slate-300">Son Kayıtlar</h4>
+                            <div id="recentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm">
+                                <p class="text-slate-500 text-center py-4">Kayıt yok</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MY REPORTS -->
+            <div id="myReportsSection" class="hidden fade-in">
+                <div class="glass rounded-xl p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold"><i class="fas fa-list mr-2 text-blue-400"></i>Raporlarım</h2>
+                        <div class="flex gap-2">
+                            <input type="date" id="filterDate" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                            <select id="filterType" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                                <option value="">Tümü</option>
+                                <option value="drilling">Sondaj</option>
+                                <option value="material">Malzeme</option>
+                                <option value="ore">Cevher</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="myReportsList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- ADMIN PANEL -->
+            <div id="adminSection" class="hidden fade-in">
+                <div class="glass rounded-xl p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold"><i class="fas fa-shield-alt mr-2 text-yellow-500"></i>Admin Paneli</h2>
+                        <div class="flex gap-2 flex-wrap">
+                            <input type="date" id="adminDate" onchange="loadAdminData()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                            <input type="text" id="adminLoc" onkeyup="loadAdminData()" placeholder="Lokasyon..." class="input-dark px-3 py-2 rounded-lg text-sm">
+                            <select id="adminType" onchange="loadAdminData()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                                <option value="">Tümü</option>
+                                <option value="drilling">Sondaj</option>
+                                <option value="material">Malzeme</option>
+                                <option value="ore">Cevher</option>
+                            </select>
+                            <button onclick="exportCSV()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">
+                                <i class="fas fa-download mr-1"></i>CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="border-b border-slate-700 text-slate-400">
+                                <tr>
+                                    <th class="text-left py-3 px-2">Tarih</th>
+                                    <th class="text-left py-3 px-2">Tip</th>
+                                    <th class="text-left py-3 px-2">Lokasyon</th>
+                                    <th class="text-left py-3 px-2">Detay</th>
+                                    <th class="text-left py-3 px-2">Kullanıcı</th>
+                                    <th class="text-right py-3 px-2">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                    <div id="adminSummary" class="mt-6 grid sm:grid-cols-3 gap-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIG ====================
+        const SUPABASE_URL = 'https://cxvrcqkkxfblpxzynfya.supabase.co'; // DEĞİŞTİR
+        const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
+        
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
+        let isAdmin = false;
+        let currentTab = 'drilling';
+
+        // ==================== AUTH ====================
+        function toggleAuth() {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+            document.getElementById('authMessage').classList.add('hidden');
+        }
+
+        function showAuthMessage(msg, isError = false) {
+            const el = document.getElementById('authMessage');
+            el.textContent = msg;
+            el.className = `mt-4 text-center text-sm ${isError ? 'text-red-400' : 'text-green-400'}`;
+            el.classList.remove('hidden');
+        }
+
+        async function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            if (!email || !password || password.length < 6) {
+                showAuthMessage('Email ve en az 6 karakter şifre gerekli', true);
+                return;
+            }
+            
+            const { data, error } = await db.auth.signUp({
+                email, password,
+                options: { data: { full_name: name } }
+            });
+            
+            if (error) showAuthMessage(error.message, true);
+            else showAuthMessage('Kayıt başarılı! Email doğrulama linkini kontrol edin.');
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            const { data, error } = await db.auth.signInWithPassword({ email, password });
+            
+            if (error) showAuthMessage(error.message, true);
+        }
+
+        async function handleLogout() {
+            await db.auth.signOut();
+            location.reload();
+        }
+
+        // ==================== APP INIT ====================
+        async function initApp() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('appScreen').classList.remove('hidden');
+                document.getElementById('userName').textContent = currentUser.email;
+                
+                // Check admin
+                const { data: profile } = await db.from('profiles').select('is_admin').eq('id', currentUser.id).single();
+                if (profile?.is_admin) {
+                    isAdmin = true;
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                }
+                
+                // Set default dates
+                const today = new Date().toISOString().split('T')[0];
+                document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+                
+                loadTodayStats();
+                loadRecentEntries();
+            }
+        }
+
+        db.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') initApp();
+            if (event === 'SIGNED_OUT') location.reload();
+        });
+
+        // ==================== NAVIGATION ====================
+        function showSection(section) {
+            ['dashboard', 'myReports', 'admin'].forEach(s => {
+                document.getElementById(s + 'Section').classList.add('hidden');
+            });
+            document.getElementById(section + 'Section').classList.remove('hidden');
+            
+            if (section === 'myReports') loadMyReports();
+            if (section === 'admin') loadAdminData();
+        }
+
+        function setTab(tab) {
+            currentTab = tab;
+            ['drilling', 'material', 'ore'].forEach(t => {
+                document.getElementById('form-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('tab-active');
+                document.getElementById('tab-' + t).classList.add('text-slate-400');
+            });
+            document.getElementById('form-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            document.getElementById('tab-' + tab).classList.remove('text-slate-400');
+        }
+
+        // ==================== SUBMIT ====================
+        async function submitEntry(type) {
+            let data = { date: '', location: '', details: {} };
+            
+            if (type === 'drilling') {
+                data.date = document.getElementById('d_date').value;
+                data.location = document.getElementById('d_location').value;
+                data.details = {
+                    meter: document.getElementById('d_meter').value,
+                    row: document.getElementById('d_row').value,
+                    holes: document.getElementById('d_holes').value
+                };
+            } else if (type === 'material') {
+                data.date = document.getElementById('m_date').value;
+                data.location = document.getElementById('m_location').value;
+                data.details = {
+                    category: document.getElementById('m_category').value,
+                    name: document.getElementById('m_name').value,
+                    quantity: document.getElementById('m_qty').value,
+                    unit: document.getElementById('m_unit').value
+                };
+            } else if (type === 'ore') {
+                data.date = document.getElementById('o_date').value;
+                data.location = document.getElementById('o_location').value;
+                data.details = {
+                    type: document.getElementById('o_type').value,
+                    quantity: document.getElementById('o_qty').value,
+                    direction: document.getElementById('o_direction').value,
+                    equipment: document.getElementById('o_equip').value,
+                    shift: document.getElementById('o_shift').value
+                };
+            }
+            
+            if (!data.date || !data.location) {
+                alert('Tarih ve lokasyon zorunlu!');
+                return;
+            }
+            
+            const { error } = await db.from('entries').insert([{
+                date: data.date,
+                entry_type: type,
+                location: data.location,
+                details: data.details,
+                user_id: currentUser.id
+            }]);
+            
+            if (error) {
+                alert('Hata: ' + error.message);
+            } else {
+                // Clear form
+                document.querySelectorAll('.input-dark').forEach(el => {
+                    if (el.type !== 'date' && el.tagName !== 'SELECT') el.value = '';
+                });
+                loadTodayStats();
+                loadRecentEntries();
+                alert('Kaydedildi!');
+            }
+        }
+
+        // ==================== LOAD DATA ====================
+        async function loadTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await db.from('entries').select('*').eq('date', today);
+            
+            document.getElementById('statDrill').textContent = (data?.filter(e => e.entry_type === 'drilling').length || 0) + ' kayıt';
+            document.getElementById('statMat').textContent = (data?.filter(e => e.entry_type === 'material').length || 0) + ' kayıt';
+            document.getElementById('statOre').textContent = (data?.filter(e => e.entry_type === 'ore').length || 0) + ' kayıt';
+        }
+
+        async function loadRecentEntries() {
+            const { data } = await db.from('entries')
+                .select('*')
+                .eq('user_id', currentUser.id)
+                .order('created_at', { ascending: false })
+                .limit(10);
+            
+            const container = document.getElementById('recentEntries');
+            if (!data?.length) {
+                container.innerHTML = '<p class="text-slate-500 text-center py-4">Kayıt yok</p>';
+                return;
+            }
+            
+            container.innerHTML = data.map(e => `
+                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(e.entry_type)}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs text-slate-400">${e.date}</span>
+                            <div class="font-medium">${e.location}</div>
+                            <div class="text-xs text-slate-400">${formatDetails(e)}</div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadMyReports() {
+            const date = document.getElementById('filterDate').value;
+            const type = document.getElementById('filterType').value;
+            
+            let query = db.from('entries').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
+            if (date) query = query.eq('date', date);
+            if (type) query = query.eq('entry_type', type);
+            
+            const { data } = await query;
+            const container = document.getElementById('myReportsList');
+            
+            if (!data?.length) {
+                container.innerHTML = '<p class="text-slate-500 text-center py-8">Kayıt bulunamadı</p>';
+                return;
+            }
+            
+            container.innerHTML = data.map(e => `
+                <div class="glass rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs px-2 py-0.5 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                            <span class="text-sm text-slate-400">${e.date}</span>
+                        </div>
+                        <div class="font-semibold text-lg">${e.location}</div>
+                        <div class="text-sm text-slate-300">${formatDetails(e)}</div>
+                    </div>
+                    <button onclick="deleteEntry('${e.id}')" class="btn-danger px-4 py-2 rounded-lg text-sm">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function loadAdminData() {
+            if (!isAdmin) return;
+            
+            const date = document.getElementById('adminDate').value;
+            const loc = document.getElementById('adminLoc').value;
+            const type = document.getElementById('adminType').value;
+            
+            let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(200);
+            if (date) query = query.eq('date', date);
+            if (loc) query = query.ilike('location', `%${loc}%`);
+            if (type) query = query.eq('entry_type', type);
+            
+            const { data } = await query;
+            const tbody = document.getElementById('adminTableBody');
+            
+            if (!data?.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">Kayıt bulunamadı</td></tr>';
+                document.getElementById('adminSummary').innerHTML = '';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(e => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="py-3 px-2 whitespace-nowrap">${e.date}</td>
+                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(e.entry_type)}</span></td>
+                    <td class="py-3 px-2 font-medium">${e.location}</td>
+                    <td class="py-3 px-2 text-slate-300">${formatDetails(e)}</td>
+                    <td class="py-3 px-2 text-xs text-slate-400">${e.profiles?.full_name || '-'}</td>
+                    <td class="py-3 px-2 text-right">
+                        <button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Summary
+            const summary = { drilling: 0, material: 0, ore: 0 };
+            data.forEach(e => summary[e.entry_type]++);
+            document.getElementById('adminSummary').innerHTML = `
+                <div class="glass rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-400">${summary.drilling}</div>
+                    <div class="text-xs text-slate-400">Sondaj</div>
+                </div>
+                <div class="glass rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-green-400">${summary.material}</div>
+                    <div class="text-xs text-slate-400">Malzeme</div>
+                </div>
+                <div class="glass rounded-lg p-4 text-center">
+                    <div class="text-2xl font-bold text-orange-400">${summary.ore}</div>
+                    <div class="text-xs text-slate-400">Cevher/Paşa</div>
+                </div>
+            `;
+        }
+
+        async function deleteEntry(id) {
+            if (!confirm('Silmek istediğinize emin misiniz?')) return;
+            const { error } = await db.from('entries').delete().eq('id', id);
+            if (!error) {
+                loadMyReports();
+                loadAdminData();
+                loadTodayStats();
+                loadRecentEntries();
+            }
+        }
+
+        function exportCSV() {
+            const rows = document.querySelectorAll('#adminTableBody tr');
+            if (!rows.length) return;
+            
+            let csv = 'Tarih,Tip,Lokasyon,Detay,Kullanici\n';
+            rows.forEach(row => {
+                const cols = row.querySelectorAll('td');
+                if (cols.length >= 5) {
+                    const vals = Array.from(cols).slice(0, 5).map(c => `"${c.textContent.trim()}"`);
+                    csv += vals.join(',') + '\n';
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'raporlar_' + new Date().toISOString().split('T')[0] + '.csv';
+            link.click();
+        }
+
+        // ==================== HELPERS ====================
+        function getTypeLabel(type) {
+            return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher' }[type] || type;
+        }
+
+        function getBorderColor(type) {
+            return { drilling: 'border-blue-500', material: 'border-green-500', ore: 'border-orange-500' }[type] || 'border-slate-500';
+        }
+
+        function formatDetails(entry) {
+            const d = entry.details;
+            if (entry.entry_type === 'drilling') return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
+            if (entry.entry_type === 'material') return `${d.name}: ${d.quantity} ${d.unit} | ${d.category}`;
+            if (entry.entry_type === 'ore') return `${d.type} ${d.quantity} ${d.direction} | ${d.equipment || ''} ${d.shift || ''}`;
+            return JSON.stringify(d);
+        }
+
+        // Init
+        initApp();
+    </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Yedek / geçici dosyalar (eski secret anahtar bunların içinde olabilir)
+*.bak
+*.rtf
+*~
+
+# Editör
+.vscode/
+.idea/
+
+# Ortam değişkenleri — anahtarlar asla depoya girmesin
+.env
+.env.*
