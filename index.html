@@ -122,7 +122,7 @@
                                 <i class="fas fa-boxes mr-2"></i>Malzeme Kullanımı
                             </button>
                             <button onclick="setTab('ore')" id="tab-ore" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
-                                <i class="fas fa-dolly mr-2"></i>Cevher / Paşa
+                                <i class="fas fa-dolly mr-2"></i>Cevher / Pasa
                             </button>
                         </div>
 
@@ -202,7 +202,7 @@
                         <!-- Ore Form -->
                         <div id="form-ore" class="glass rounded-xl p-6 hidden">
                             <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                                <i class="fas fa-dolly text-orange-400"></i> Cevher / Paşa Hareketi
+                                <i class="fas fa-dolly text-orange-400"></i> Cevher / Pasa Hareketi
                             </h3>
                             <div class="grid sm:grid-cols-2 gap-4">
                                 <div>
@@ -213,23 +213,40 @@
                                     <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
                                     <input type="text" id="o_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 319">
                                 </div>
-                                <div>
-                                    <label class="block text-sm text-slate-400 mb-1">Tip</label>
-                                    <select id="o_type" class="input-dark w-full px-3 py-2 rounded-lg">
-                                        <option value="cevher">Cevher</option>
-                                        <option value="pasa">Paşa</option>
-                                    </select>
+                                <div class="sm:col-span-2 rounded-lg border border-slate-700 border-l-4 border-l-orange-500 p-4">
+                                    <div class="text-sm font-medium text-orange-400 mb-3">Cevher</div>
+                                    <div class="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm text-slate-400 mb-1">Miktar</label>
+                                            <input type="number" id="o_cevher_qty" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 24">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-slate-400 mb-1">Yön</label>
+                                            <select id="o_cevher_dir" class="input-dark w-full px-3 py-2 rounded-lg">
+                                                <option value="iceri">İçeri</option>
+                                                <option value="disari">Dışarı</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm text-slate-400 mb-1">Miktar</label>
-                                    <input type="number" id="o_qty" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 24">
+                                <div class="sm:col-span-2 rounded-lg border border-slate-700 border-l-4 border-l-slate-500 p-4">
+                                    <div class="text-sm font-medium text-slate-300 mb-3">Pasa</div>
+                                    <div class="grid sm:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-sm text-slate-400 mb-1">Miktar</label>
+                                            <input type="number" id="o_pasa_qty" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 12">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm text-slate-400 mb-1">Yön</label>
+                                            <select id="o_pasa_dir" class="input-dark w-full px-3 py-2 rounded-lg">
+                                                <option value="iceri">İçeri</option>
+                                                <option value="disari">Dışarı</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="block text-sm text-slate-400 mb-1">Yön</label>
-                                    <select id="o_direction" class="input-dark w-full px-3 py-2 rounded-lg">
-                                        <option value="iceri">İçeri</option>
-                                        <option value="disari">Dışarı</option>
-                                    </select>
+                                <div class="sm:col-span-2 text-xs text-slate-500 -mt-1">
+                                    Yalnızca birini de doldurabilirsin, ikisini birden de. Boş bıraktığın için kayıt açılmaz.
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Ekipman</label>
@@ -253,7 +270,7 @@
                             <div id="todayStats" class="space-y-2 text-sm">
                                 <div class="flex justify-between"><span class="text-slate-400">Sondaj:</span><span class="font-mono" id="statDrill">-</span></div>
                                 <div class="flex justify-between"><span class="text-slate-400">Malzeme:</span><span class="font-mono" id="statMat">-</span></div>
-                                <div class="flex justify-between"><span class="text-slate-400">Cevher:</span><span class="font-mono" id="statOre">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Cevher/Pasa:</span><span class="font-mono" id="statOre">-</span></div>
                             </div>
                         </div>
                         <div class="glass rounded-xl p-5">
@@ -277,7 +294,7 @@
                                 <option value="">Tümü</option>
                                 <option value="drilling">Sondaj</option>
                                 <option value="material">Malzeme</option>
-                                <option value="ore">Cevher</option>
+                                <option value="ore">Cevher/Pasa</option>
                             </select>
                         </div>
                     </div>
@@ -297,7 +314,7 @@
                                 <option value="">Tümü</option>
                                 <option value="drilling">Sondaj</option>
                                 <option value="material">Malzeme</option>
-                                <option value="ore">Cevher</option>
+                                <option value="ore">Cevher/Pasa</option>
                             </select>
                             <button onclick="exportCSV()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">
                                 <i class="fas fa-download mr-1"></i>CSV
@@ -460,13 +477,21 @@
             } else if (type === 'ore') {
                 data.date = document.getElementById('o_date').value;
                 data.location = document.getElementById('o_location').value;
-                data.details = {
-                    type: document.getElementById('o_type').value,
-                    quantity: document.getElementById('o_qty').value,
-                    direction: document.getElementById('o_direction').value,
-                    equipment: document.getElementById('o_equip').value,
-                    shift: document.getElementById('o_shift').value
-                };
+                // Cevher ve pasa birbirinden bağımsız: biri, diğeri ya da ikisi
+                // birden girilebilir. Dolu olan her tip ayrı bir kayıt olur.
+                const equipment = document.getElementById('o_equip').value;
+                const shift = document.getElementById('o_shift').value;
+                data.rows = [
+                    { type: 'cevher', qtyId: 'o_cevher_qty', dirId: 'o_cevher_dir' },
+                    { type: 'pasa',   qtyId: 'o_pasa_qty',   dirId: 'o_pasa_dir' }
+                ].filter(r => document.getElementById(r.qtyId).value.trim() !== '')
+                 .map(r => ({
+                    type: r.type,
+                    quantity: document.getElementById(r.qtyId).value,
+                    direction: document.getElementById(r.dirId).value,
+                    equipment: equipment,
+                    shift: shift
+                }));
             }
             
             if (!data.date || !data.location) {
@@ -474,13 +499,20 @@
                 return;
             }
             
-            const { error } = await db.from('entries').insert([{
+            if (data.rows && data.rows.length === 0) {
+                alert('En az bir miktar girin — cevher, pasa ya da ikisi.');
+                return;
+            }
+            
+            const payload = (data.rows || [data.details]).map(details => ({
                 date: data.date,
                 entry_type: type,
                 location: data.location,
-                details: data.details,
+                details: details,
                 user_id: currentUser.id
-            }]);
+            }));
+            
+            const { error } = await db.from('entries').insert(payload);
             
             if (error) {
                 alert('Hata: ' + error.message);
@@ -491,7 +523,7 @@
                 });
                 loadTodayStats();
                 loadRecentEntries();
-                alert('Kaydedildi!');
+                alert(payload.length > 1 ? payload.length + ' kayıt eklendi!' : 'Kaydedildi!');
             }
         }
 
@@ -615,7 +647,7 @@
                 </div>
                 <div class="glass rounded-lg p-4 text-center">
                     <div class="text-2xl font-bold text-orange-400">${summary.ore}</div>
-                    <div class="text-xs text-slate-400">Cevher/Paşa</div>
+                    <div class="text-xs text-slate-400">Cevher/Pasa</div>
                 </div>
             `;
         }
@@ -653,7 +685,11 @@
 
         // ==================== HELPERS ====================
         function getTypeLabel(type) {
-            return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher' }[type] || type;
+            return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher/Pasa' }[type] || type;
+        }
+
+        function oreTypeLabel(t) {
+            return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t;
         }
 
         function getBorderColor(type) {
@@ -664,7 +700,7 @@
             const d = entry.details;
             if (entry.entry_type === 'drilling') return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
             if (entry.entry_type === 'material') return `${d.name}: ${d.quantity} ${d.unit} | ${d.category}`;
-            if (entry.entry_type === 'ore') return `${d.type} ${d.quantity} ${d.direction} | ${d.equipment || ''} ${d.shift || ''}`;
+            if (entry.entry_type === 'ore') return `${oreTypeLabel(d.type)} ${d.quantity} ${d.direction} | ${d.equipment || ''} ${d.shift || ''}`;
             return JSON.stringify(d);
         }
 
