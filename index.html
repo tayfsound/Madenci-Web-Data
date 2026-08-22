@@ -843,10 +843,14 @@
             cats.forEach(cat => {
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
-                item.innerHTML = `<span>${cat.name}</span>
-                    <button onclick="deleteCategory('${cat.id}')" class="text-red-400 hover:text-red-300">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>`;
+                const span = document.createElement('span');
+                span.textContent = cat.name;
+                const btn = document.createElement('button');
+                btn.className = 'text-red-400 hover:text-red-300';
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteCategory(cat.id));
+                item.appendChild(span);
+                item.appendChild(btn);
                 div.appendChild(item);
             });
         }
@@ -885,6 +889,7 @@
         }
 
         async function deleteCategory(id) {
+            console.log('deleteCategory çağrıldı, id:', id);
             if (!confirm('Kategoriyi sil? (Malzemeleri de silinecek)')) return;
             const { error } = await db.from('categories').delete().eq('id', id);
             if (!error) loadCategoriesList();
@@ -907,10 +912,14 @@
             mats.forEach(mat => {
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
-                item.innerHTML = `<span>${mat.name}</span>
-                    <button onclick="deleteMaterial('${mat.id}')" class="text-red-400 hover:text-red-300">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>`;
+                const span = document.createElement('span');
+                span.textContent = mat.name;
+                const btn = document.createElement('button');
+                btn.className = 'text-red-400 hover:text-red-300';
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteMaterial(mat.id));
+                item.appendChild(span);
+                item.appendChild(btn);
                 div.appendChild(item);
             });
         }
@@ -951,10 +960,14 @@
             locs.forEach(loc => {
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
-                item.innerHTML = `<span>${loc.name}</span>
-                    <button onclick="deleteLocation('${loc.id}')" class="text-red-400 hover:text-red-300">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>`;
+                const span = document.createElement('span');
+                span.textContent = loc.name;
+                const btn = document.createElement('button');
+                btn.className = 'text-red-400 hover:text-red-300';
+                btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteLocation(loc.id));
+                item.appendChild(span);
+                item.appendChild(btn);
                 div.appendChild(item);
             });
         }
