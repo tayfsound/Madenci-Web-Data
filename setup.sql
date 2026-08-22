@@ -52,9 +52,9 @@ create table if not exists public.locations (
   created_at timestamptz not null default now()
 );
 
--- örnek veriler (admin bunları yönetecek)
-insert into public.categories (name) values ('Patlayıcı'), ('İnşaat Malzemesi'), ('Yardımcı Malzeme')
-on conflict (name) do nothing;
+-- Kategori, malzeme ve lokasyonlar admin panelinden yönetiliyor; buraya
+-- örnek veri konmuyor. Aksi halde dosya her çalıştırıldığında panelden
+-- silinmiş kayıtlar geri gelir.
 
 -- ---------- KAYIT OLUNCA PROFİL AÇ ----------
 -- Kodda profiles'a hiçbir yerde insert yok, sadece okuma var. Profil
