@@ -829,7 +829,11 @@
 
         // ==================== KATEGORİ & MALZEME YÖNETİMİ ====================
         async function loadCategoriesList() {
-            const { data: cats } = await db.from('categories').select('*').order('name');
+            const { data: cats, error } = await db.from('categories').select('*').order('name');
+            if (error) {
+                alert('Kategoriler yüklenemedi: ' + error.message);
+                return;
+            }
             const div = document.getElementById('categoriesList');
             div.innerHTML = '';
             if (!cats || cats.length === 0) {
