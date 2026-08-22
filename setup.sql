@@ -52,9 +52,21 @@ create table if not exists public.locations (
   created_at timestamptz not null default now()
 );
 
--- Kategori, malzeme ve lokasyonlar admin panelinden yönetiliyor; buraya
--- örnek veri konmuyor. Aksi halde dosya her çalıştırıldığında panelden
--- silinmiş kayıtlar geri gelir.
+-- Delgi tipleri (Ayna, Tavan, Bypass ...)
+-- fields: bu tipin formda hangi alanları isteyeceği. Alan anahtarları
+-- index.html içindeki DELGI_ALANLARI kataloğuyla eşleşir; sabit tutulmaları
+-- raporların geçmiş kayıtları da toplayabilmesi için şart.
+-- örn: '["sira_no","delik_sayisi","metre"]'
+create table if not exists public.drilling_types (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null unique,
+  fields     jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+-- Kategori, malzeme, lokasyon ve delgi tipleri admin panelinden yönetiliyor;
+-- buraya örnek veri konmuyor. Aksi halde dosya her çalıştırıldığında
+-- panelden silinmiş kayıtlar geri gelir.
 
 -- ---------- KAYIT OLUNCA PROFİL AÇ ----------
 -- Kodda profiles'a hiçbir yerde insert yok, sadece okuma var. Profil
@@ -100,9 +112,10 @@ as $$
 $$;
 
 
-alter table public.categories enable row level security;
-alter table public.locations  enable row level security;
-alter table public.materials  enable row level security;
+alter table public.categories     enable row level security;
+alter table public.locations      enable row level security;
+alter table public.materials      enable row level security;
+alter table public.drilling_types enable row level security;
 
 -- ---------- RLS ----------
 
@@ -152,6 +165,30 @@ create policy locations_insert on public.locations
   with check (public.is_admin());
 
 create policy locations_delete on public.locations
+  for delete to authenticated
+  using (public.is_admin());
+
+-- Delgi tipleri: herkes okur, yalnızca admin yazar. Alan listesi
+-- değiştirilebildiği için burada update politikası da gerekiyor.
+drop policy if exists drilling_types_select on public.drilling_types;
+drop policy if exists drilling_types_insert on public.drilling_types;
+drop policy if exists drilling_types_update on public.drilling_types;
+drop policy if exists drilling_types_delete on public.drilling_types;
+
+create policy drilling_types_select on public.drilling_types
+  for select to authenticated
+  using (true);
+
+create policy drilling_types_insert on public.drilling_types
+  for insert to authenticated
+  with check (public.is_admin());
+
+create policy drilling_types_update on public.drilling_types
+  for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+
+create policy drilling_types_delete on public.drilling_types
   for delete to authenticated
   using (public.is_admin());
 

@@ -140,17 +140,16 @@
                                     <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
                                     <select id="d_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
                                 </div>
-                                <div>
-                                    <label class="block text-sm text-slate-400 mb-1">Metre</label>
-                                    <input type="number" id="d_meter" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 75">
-                                </div>
-                                <div>
-                                    <label class="block text-sm text-slate-400 mb-1">Sıra No</label>
-                                    <input type="text" id="d_row" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 64">
-                                </div>
                                 <div class="sm:col-span-2">
-                                    <label class="block text-sm text-slate-400 mb-1">Delik Sayısı / Not</label>
-                                    <input type="text" id="d_holes" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 6 delik">
+                                    <label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label>
+                                    <select id="d_type" class="input-dark w-full px-3 py-2 rounded-lg" onchange="renderDrillingFields()">
+                                        <option value="">Seç</option>
+                                    </select>
+                                </div>
+                                <!-- Seçilen delgi tipinin istediği alanlar buraya çizilir -->
+                                <div id="d_dynamicFields" class="sm:col-span-2 grid sm:grid-cols-2 gap-4"></div>
+                                <div id="d_typeHint" class="sm:col-span-2 text-xs text-slate-500">
+                                    Delgi tipini seçince o tipe ait alanlar açılır.
                                 </div>
                             </div>
                             <button onclick="submitEntry('drilling')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90">
@@ -389,6 +388,33 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Delgi Tipleri -->
+                <div class="glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-bold mb-1"><i class="fas fa-bullseye mr-2 text-green-400"></i>Delgi Tipleri</h3>
+                    <p class="text-sm text-slate-400 mb-4">
+                        Her tip için formda hangi alanların isteneceğini burada belirle.
+                        Örneğin Ayna delgisinde atış sayısı, Tavan delgisinde sıra no ve delik sayısı.
+                    </p>
+
+                    <div class="rounded-lg border border-slate-700 p-4 mb-4">
+                        <div class="grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Tip adı</label>
+                                <input type="text" id="newDrillingTypeName" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="örn: Ayna">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Bu tipte istenecek alanlar</label>
+                                <div id="newDrillingTypeFields" class="flex flex-wrap gap-3 pt-2"></div>
+                            </div>
+                        </div>
+                        <button onclick="addDrillingType()" class="w-full mt-4 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium">
+                            <i class="fas fa-plus mr-1"></i>Delgi Tipi Ekle
+                        </button>
+                    </div>
+
+                    <div id="drillingTypesList" class="space-y-3"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -454,6 +480,19 @@
         let categories = [];
         let materialsByCategory = {};
         let locations = [];
+        let drillingTypes = [];
+
+        // Delgi alanları kataloğu. Admin her delgi tipi için buradan seçim
+        // yapar. Anahtarlar (atis_sayisi, sira_no ...) veritabanına bu adla
+        // yazıldığı için sabit kalmalı — raporlar geçmiş kayıtları bu
+        // anahtarlar üzerinden toplayacak.
+        const DELGI_ALANLARI = {
+            atis_sayisi:  { label: 'Atış Sayısı',  type: 'number', placeholder: 'örn: 3' },
+            sira_no:      { label: 'Sıra No',      type: 'text',   placeholder: 'örn: 64' },
+            delik_sayisi: { label: 'Delik Sayısı', type: 'number', placeholder: 'örn: 6' },
+            metre:        { label: 'Metre',        type: 'number', placeholder: 'örn: 75' },
+            not:          { label: 'Not',          type: 'text',   placeholder: 'serbest açıklama' }
+        };
 
         async function loadCategoriesAndMaterials() {
             // Kategorileri yükle
@@ -461,12 +500,17 @@
             if (cats) {
                 categories = cats;
                 const select = document.getElementById('m_category');
+                // Bu fonksiyon her ekleme sonrası yeniden çalışıyor; listeyi
+                // sıfırlamazsak seçenekler üst üste birikir.
+                const secili = select.value;
+                select.innerHTML = '<option value="">Seç</option>';
                 cats.forEach(cat => {
                     const opt = document.createElement('option');
                     opt.value = cat.id;
                     opt.textContent = cat.name;
                     select.appendChild(opt);
                 });
+                select.value = secili;
             }
             
             // Malzemeleri kategori başına grupla
@@ -496,6 +540,79 @@
                     }
                 });
             }
+        }
+
+        async function loadDrillingTypes() {
+            const { data: types, error } = await db.from('drilling_types').select('*').order('name');
+            if (error) {
+                console.error('Delgi tipleri yüklenemedi:', error.message);
+                return;
+            }
+            drillingTypes = types || [];
+
+            const select = document.getElementById('d_type');
+            const secili = select.value;
+            select.innerHTML = '<option value="">Seç</option>';
+            drillingTypes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+            select.value = secili;
+            renderDrillingFields();
+        }
+
+        // Seçilen delgi tipinin istediği alanları çizer. Girilmiş değerler
+        // tip değişse de korunur; kullanıcı yanlış tipi seçip düzeltirse
+        // yazdıkları silinmesin.
+        function renderDrillingFields() {
+            const kapsayici = document.getElementById('d_dynamicFields');
+            const ipucu = document.getElementById('d_typeHint');
+            const oncekiDegerler = {};
+            kapsayici.querySelectorAll('[data-alan]').forEach(el => {
+                if (el.value) oncekiDegerler[el.dataset.alan] = el.value;
+            });
+            kapsayici.innerHTML = '';
+
+            const tip = drillingTypes.find(t => t.id === document.getElementById('d_type').value);
+            if (!tip) {
+                ipucu.textContent = drillingTypes.length === 0
+                    ? 'Henüz delgi tipi tanımlanmamış. Admin panelinden ekleyebilirsin.'
+                    : 'Delgi tipini seçince o tipe ait alanlar açılır.';
+                ipucu.classList.remove('hidden');
+                return;
+            }
+
+            const alanlar = Array.isArray(tip.fields) ? tip.fields : [];
+            if (alanlar.length === 0) {
+                ipucu.textContent = '"' + tip.name + '" tipine hiç alan atanmamış. Admin panelinden alan seç.';
+                ipucu.classList.remove('hidden');
+                return;
+            }
+            ipucu.classList.add('hidden');
+
+            alanlar.forEach(anahtar => {
+                const tanim = DELGI_ALANLARI[anahtar];
+                if (!tanim) return;   // katalogdan kaldırılmış eski anahtar
+                const sarmal = document.createElement('div');
+                if (anahtar === 'not') sarmal.className = 'sm:col-span-2';
+
+                const etiket = document.createElement('label');
+                etiket.className = 'block text-sm text-slate-400 mb-1';
+                etiket.textContent = tanim.label;
+
+                const girdi = document.createElement('input');
+                girdi.type = tanim.type;
+                girdi.className = 'input-dark w-full px-3 py-2 rounded-lg';
+                girdi.placeholder = tanim.placeholder;
+                girdi.dataset.alan = anahtar;
+                if (oncekiDegerler[anahtar]) girdi.value = oncekiDegerler[anahtar];
+
+                sarmal.appendChild(etiket);
+                sarmal.appendChild(girdi);
+                kapsayici.appendChild(sarmal);
+            });
         }
 
         function updateMaterialOptions() {
@@ -531,7 +648,8 @@
                 
                 // Kategoriler ve malzemeleri yükle
                 await loadCategoriesAndMaterials();
-                
+                await loadDrillingTypes();
+
                 // Set default dates
                 const today = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
@@ -558,6 +676,9 @@
                 loadAdminData();
                 loadCategoriesList();
                 loadLocationsList();
+                loadDrillingTypesList();
+                // Yeni delgi tipi formundaki alan kutuları
+                alanKutulariCiz(document.getElementById('newDrillingTypeFields'), [], 'yeni');
                 // Malzeme yönetim dropdown'unu da doldur
                 const select = document.getElementById('materialCategorySelect');
                 select.innerHTML = '<option value="">Kategori seç</option>';
@@ -587,13 +708,20 @@
             let data = { date: '', location: '', details: {} };
             
             if (type === 'drilling') {
+                const tipSelect = document.getElementById('d_type');
+                const tip = drillingTypes.find(t => t.id === tipSelect.value);
+                if (!tip) {
+                    alert('Delgi tipi seçin.');
+                    return;
+                }
                 data.date = document.getElementById('d_date').value;
                 data.location = document.getElementById('d_location').value;
-                data.details = {
-                    meter: document.getElementById('d_meter').value,
-                    row: document.getElementById('d_row').value,
-                    holes: document.getElementById('d_holes').value
-                };
+                // Tip adı da yazılıyor: tip sonradan yeniden adlandırılsa ya da
+                // silinse bile eski kayıt neyin raporu olduğunu kendi içinde taşır.
+                data.details = { drilling_type_id: tip.id, drilling_type: tip.name };
+                document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => {
+                    if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value;
+                });
             } else if (type === 'material') {
                 const catSelect = document.getElementById('m_category');
                 const nameSelect = document.getElementById('m_name');
@@ -1013,13 +1141,138 @@
             }
         }
 
+        // ==================== DELGİ TİPİ YÖNETİMİ ====================
+        // Alan kataloğundan onay kutuları üretir. secili: işaretli gelecek
+        // anahtarlar, adPrefix: aynı sayfada birden çok kutu grubu olduğu için
+        // id çakışmasını önler.
+        function alanKutulariCiz(kapsayici, secili, adPrefix) {
+            kapsayici.innerHTML = '';
+            Object.keys(DELGI_ALANLARI).forEach(anahtar => {
+                const etiket = document.createElement('label');
+                etiket.className = 'flex items-center gap-2 text-sm cursor-pointer';
+
+                const kutu = document.createElement('input');
+                kutu.type = 'checkbox';
+                kutu.value = anahtar;
+                kutu.dataset.alanKutusu = adPrefix;
+                kutu.checked = secili.includes(anahtar);
+                kutu.className = 'accent-green-500';
+
+                const yazi = document.createElement('span');
+                yazi.textContent = DELGI_ALANLARI[anahtar].label;
+
+                etiket.appendChild(kutu);
+                etiket.appendChild(yazi);
+                kapsayici.appendChild(etiket);
+            });
+        }
+
+        function seciliAlanlar(adPrefix) {
+            return Array.from(document.querySelectorAll(`[data-alan-kutusu="${adPrefix}"]`))
+                .filter(k => k.checked)
+                .map(k => k.value);
+        }
+
+        async function loadDrillingTypesList() {
+            const { data: types, error } = await db.from('drilling_types').select('*').order('name');
+            const div = document.getElementById('drillingTypesList');
+            if (error) {
+                div.textContent = 'Delgi tipleri yüklenemedi: ' + error.message;
+                return;
+            }
+            drillingTypes = types || [];
+            div.innerHTML = '';
+
+            if (drillingTypes.length === 0) {
+                div.innerHTML = '<p class="text-slate-500 text-sm">Henüz delgi tipi yok. Yukarıdan ekle.</p>';
+                return;
+            }
+
+            drillingTypes.forEach(tip => {
+                const kart = document.createElement('div');
+                kart.className = 'rounded-lg border border-slate-700 p-4';
+
+                const ust = document.createElement('div');
+                ust.className = 'flex justify-between items-center mb-3';
+
+                const ad = document.createElement('span');
+                ad.className = 'font-medium';
+                ad.textContent = tip.name;
+
+                const silBtn = document.createElement('button');
+                silBtn.className = 'text-red-400 hover:text-red-300';
+                silBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                silBtn.addEventListener('click', () => deleteDrillingType(tip.id));
+
+                ust.appendChild(ad);
+                ust.appendChild(silBtn);
+
+                const kutular = document.createElement('div');
+                kutular.className = 'flex flex-wrap gap-3 mb-3';
+                alanKutulariCiz(kutular, Array.isArray(tip.fields) ? tip.fields : [], 'tip-' + tip.id);
+
+                const kaydetBtn = document.createElement('button');
+                kaydetBtn.className = 'text-sm px-3 py-1.5 rounded bg-slate-700 hover:bg-slate-600';
+                kaydetBtn.textContent = 'Alanları kaydet';
+                kaydetBtn.addEventListener('click', () => saveDrillingTypeFields(tip.id));
+
+                kart.appendChild(ust);
+                kart.appendChild(kutular);
+                kart.appendChild(kaydetBtn);
+                div.appendChild(kart);
+            });
+        }
+
+        async function addDrillingType() {
+            const ad = document.getElementById('newDrillingTypeName').value.trim();
+            if (!ad) return alert('Tip adı giriniz');
+            const alanlar = seciliAlanlar('yeni');
+
+            const { error } = await db.from('drilling_types').insert([{ name: ad, fields: alanlar }]);
+            if (error) return alert('Hata: ' + error.message);
+
+            document.getElementById('newDrillingTypeName').value = '';
+            alanKutulariCiz(document.getElementById('newDrillingTypeFields'), [], 'yeni');
+            await loadDrillingTypesList();
+            await loadDrillingTypes();
+        }
+
+        async function saveDrillingTypeFields(id) {
+            const alanlar = seciliAlanlar('tip-' + id);
+            const { data, error } = await db.from('drilling_types')
+                .update({ fields: alanlar }).eq('id', id).select();
+            if (error) return alert('Kaydedilemedi: ' + error.message);
+            if (!data || data.length === 0) {
+                return alert('Kaydedilemedi: veritabanı bu satırı değiştirmene izin vermiyor.\n\n'
+                           + 'drilling_types_update politikası eksik olabilir.');
+            }
+            await loadDrillingTypes();
+            alert('Alanlar kaydedildi.');
+        }
+
+        async function deleteDrillingType(id) {
+            if (!confirm('Delgi tipini sil? Bu tiple girilmiş kayıtlar silinmez.')) return;
+            const { data, error } = await db.from('drilling_types').delete().eq('id', id).select();
+            if (error) return alert('Silme hatası: ' + error.message);
+            if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('drilling_types'));
+            await loadDrillingTypesList();
+            await loadDrillingTypes();
+        }
+
         function getBorderColor(type) {
             return { drilling: 'border-blue-500', material: 'border-green-500', ore: 'border-green-500' }[type] || 'border-slate-500';
         }
 
         function formatDetails(entry) {
             const d = entry.details;
-            if (entry.entry_type === 'drilling') return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
+            if (entry.entry_type === 'drilling') {
+                // Delgi tipleri gelmeden önce yazılmış kayıtlar meter/row/holes taşıyor
+                if (!d.drilling_type) return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
+                const parcalar = Object.keys(DELGI_ALANLARI)
+                    .filter(k => d[k] !== undefined && d[k] !== '')
+                    .map(k => `${DELGI_ALANLARI[k].label}: ${d[k]}`);
+                return [d.drilling_type].concat(parcalar).join(' | ');
+            }
             if (entry.entry_type === 'material') return `${d.name}: ${d.quantity} ${d.unit} | ${d.category}`;
             if (entry.entry_type === 'ore') return `${oreTypeLabel(d.type)} ${d.quantity} ${d.direction} | ${d.shift ? shiftLabel(d.shift) : ''}`;
             return JSON.stringify(d);
