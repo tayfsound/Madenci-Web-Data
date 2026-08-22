@@ -828,6 +828,16 @@
         }
 
         // ==================== KATEGORİ & MALZEME YÖNETİMİ ====================
+        // Silme isteği hatasız dönüp hiçbir satır etkilemediğinde tek sebep
+        // vardır: tabloda delete politikası yok, RLS satırı gizliyor.
+        function RLS_DELETE_UYARISI(tablo) {
+            return 'Silinemedi: veritabanı bu satırı silmene izin vermiyor.\n\n'
+                 + 'Supabase SQL Editor\'de şunu çalıştır:\n\n'
+                 + 'create policy ' + tablo + '_delete on public.' + tablo + '\n'
+                 + '  for delete to authenticated\n'
+                 + '  using (public.is_admin());';
+        }
+
         async function loadCategoriesList() {
             const { data: cats, error } = await db.from('categories').select('*').order('name');
             if (error) {
@@ -889,10 +899,13 @@
         }
 
         async function deleteCategory(id) {
-            console.log('deleteCategory çağrıldı, id:', id);
             if (!confirm('Kategoriyi sil? (Malzemeleri de silinecek)')) return;
-            const { error } = await db.from('categories').delete().eq('id', id);
-            if (!error) loadCategoriesList();
+            // .select() eklemek kaç satırın silindiğini döndürür. RLS silmeyi
+            // engellediğinde istek hatasız döner ama hiçbir satır etkilenmez.
+            const { data, error } = await db.from('categories').delete().eq('id', id).select();
+            if (error) return alert('Silme hatası: ' + error.message);
+            if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('categories'));
+            loadCategoriesList();
         }
 
         async function loadMaterialsList() {
@@ -941,9 +954,11 @@
 
         async function deleteMaterial(id) {
             if (!confirm('Malzemeyi sil?')) return;
-            const { error } = await db.from('materials').delete().eq('id', id);
+            const { data, error } = await db.from('materials').delete().eq('id', id).select();
             if (error) {
                 alert('Silme hatası: ' + error.message);
+            } else if (!data || data.length === 0) {
+                alert(RLS_DELETE_UYARISI('materials'));
             } else {
                 loadMaterialsList();
             }
@@ -988,9 +1003,11 @@
 
         async function deleteLocation(id) {
             if (!confirm('Lokasyonu sil?')) return;
-            const { error } = await db.from('locations').delete().eq('id', id);
+            const { data, error } = await db.from('locations').delete().eq('id', id).select();
             if (error) {
                 alert('Silme hatası: ' + error.message);
+            } else if (!data || data.length === 0) {
+                alert(RLS_DELETE_UYARISI('locations'));
             } else {
                 loadLocationsList();
             }
