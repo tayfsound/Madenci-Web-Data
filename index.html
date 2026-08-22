@@ -138,7 +138,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
-                                    <input type="text" id="d_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 319 ph6">
+                                    <select id="d_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Metre</label>
@@ -170,7 +170,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
-                                    <input type="text" id="m_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 236 ayna">
+                                    <select id="m_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Kategori</label>
@@ -215,7 +215,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
-                                    <input type="text" id="o_location" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 319">
+                                    <select id="o_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
                                 </div>
                                 <div class="sm:col-span-2 rounded-lg border border-slate-700 border-l-4 border-l-orange-500 p-4">
                                     <div class="text-sm font-medium text-orange-400 mb-3">Cevher</div>
@@ -348,7 +348,7 @@
                 <div class="glass rounded-xl p-6 mt-6">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-cogs mr-2 text-blue-400"></i>Kategori & Malzeme Yönetimi</h3>
                     
-                    <div class="grid sm:grid-cols-2 gap-6">
+                    <div class="grid sm:grid-cols-3 gap-6">
                         <!-- Kategoriler -->
                         <div>
                             <h4 class="font-semibold text-blue-300 mb-3">Kategoriler</h4>
@@ -374,6 +374,18 @@
                                 </button>
                             </div>
                             <div id="materialsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+
+                        <!-- Lokasyonlar -->
+                        <div>
+                            <h4 class="font-semibold text-purple-300 mb-3">Lokasyonlar</h4>
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" id="newLocationName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="Yeni lokasyon">
+                                <button onclick="addLocation()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
+                            <div id="locationsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
                         </div>
                     </div>
                 </div>
@@ -438,9 +450,10 @@
             location.reload();
         }
 
-        // ==================== KATEGORILER & MALZEMELER ====================
+        // ==================== KATEGORILER & MALZEMELER & LOKASYONLAR ====================
         let categories = [];
         let materialsByCategory = {};
+        let locations = [];
 
         async function loadCategoriesAndMaterials() {
             // Kategorileri yükle
@@ -463,6 +476,24 @@
                 mats.forEach(mat => {
                     if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = [];
                     materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name });
+                });
+            }
+            
+            // Lokasyonları yükle
+            const { data: locs } = await db.from('locations').select('*').order('name');
+            if (locs) {
+                locations = locs;
+                ['d_location', 'm_location', 'o_location'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        select.innerHTML = '<option value="">Seç</option>';
+                        locs.forEach(loc => {
+                            const opt = document.createElement('option');
+                            opt.value = loc.name;
+                            opt.textContent = loc.name;
+                            select.appendChild(opt);
+                        });
+                    }
                 });
             }
         }
@@ -526,8 +557,10 @@
             if (section === 'admin') {
                 loadAdminData();
                 loadCategoriesList();
+                loadLocationsList();
                 // Malzeme yönetim dropdown'unu da doldur
                 const select = document.getElementById('materialCategorySelect');
+                select.innerHTML = '<option value="">Kategori seç</option>';
                 categories.forEach(cat => {
                     const opt = document.createElement('option');
                     opt.value = cat.id;
@@ -897,6 +930,45 @@
             if (!confirm('Malzemeyi sil?')) return;
             const { error } = await db.from('materials').delete().eq('id', id);
             if (!error) loadMaterialsList();
+        }
+
+        async function loadLocationsList() {
+            const { data: locs } = await db.from('locations').select('*').order('name');
+            const div = document.getElementById('locationsList');
+            div.innerHTML = '';
+            if (!locs || locs.length === 0) {
+                div.textContent = 'Lokasyon yok';
+                return;
+            }
+            locs.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                item.innerHTML = `<span>${loc.name}</span>
+                    <button onclick="deleteLocation('${loc.id}')" class="text-red-400 hover:text-red-300">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>`;
+                div.appendChild(item);
+            });
+        }
+
+        async function addLocation() {
+            const name = document.getElementById('newLocationName').value.trim();
+            if (!name) return alert('Lokasyon adı giriniz');
+            
+            const { error } = await db.from('locations').insert([{ name }]);
+            if (error) alert('Hata: ' + error.message);
+            else {
+                document.getElementById('newLocationName').value = '';
+                loadLocationsList();
+                // Form'lardaki lokasyon dropdown'larını güncelle
+                await loadCategoriesAndMaterials();
+            }
+        }
+
+        async function deleteLocation(id) {
+            if (!confirm('Lokasyonu sil?')) return;
+            const { error } = await db.from('locations').delete().eq('id', id);
+            if (!error) loadLocationsList();
         }
 
         function getBorderColor(type) {
