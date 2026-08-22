@@ -929,7 +929,11 @@
         async function deleteMaterial(id) {
             if (!confirm('Malzemeyi sil?')) return;
             const { error } = await db.from('materials').delete().eq('id', id);
-            if (!error) loadMaterialsList();
+            if (error) {
+                alert('Silme hatası: ' + error.message);
+            } else {
+                loadMaterialsList();
+            }
         }
 
         async function loadLocationsList() {
@@ -968,7 +972,11 @@
         async function deleteLocation(id) {
             if (!confirm('Lokasyonu sil?')) return;
             const { error } = await db.from('locations').delete().eq('id', id);
-            if (!error) loadLocationsList();
+            if (error) {
+                alert('Silme hatası: ' + error.message);
+            } else {
+                loadLocationsList();
+            }
         }
 
         function getBorderColor(type) {
