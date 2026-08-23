@@ -375,9 +375,9 @@
         });
 
         function showSection(section) {
-            ['dashboard', 'myReports', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
+            ['dashboard', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
             document.getElementById(section + 'Section').classList.remove('hidden');
-            if (section === 'myReports') loadMyReports();
+            
             if (section === 'admin') {
                 loadAdminData(); loadCategoriesList(); loadLocationsList(); loadDrillingTypesList(); loadLoadersList();
                 document.getElementById('newDrillingTypeName').value = '';
@@ -419,30 +419,6 @@
                         </div>
                         <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
                     </div>
-                </div>
-            `).join('');
-        }
-
-        async function loadMyReports() {
-            const date = document.getElementById('filterDate').value;
-            const type = document.getElementById('filterType').value;
-            let query = db.from('entries').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
-            if (date) query = query.eq('date', date);
-            if (type) query = query.eq('entry_type', type);
-            const { data } = await query;
-            const container = document.getElementById('myReportsList');
-            if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-8">Kayit bulunamadi</p>'; return; }
-            container.innerHTML = data.map(e => `
-                <div class="glass rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs px-2 py-0.5 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
-                            <span class="text-sm text-slate-400">${e.date}</span>
-                        </div>
-                        <div class="font-semibold text-lg">${e.location}</div>
-                        <div class="text-sm text-slate-300">${formatDetails(e)}</div>
-                    </div>
-                    <button onclick="deleteEntry('${e.id}')" class="btn-danger px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i></button>
                 </div>
             `).join('');
         }
