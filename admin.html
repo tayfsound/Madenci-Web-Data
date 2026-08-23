@@ -227,13 +227,13 @@
                 <div class="glass rounded-xl p-6 mt-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold"><i class="fas fa-layer-group mr-2 text-green-400"></i>Form Yonetimi</h3>
-                        <button onclick="createDefaultFields()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium" title="Mevcut 4 form icin varsayilan alanlari otomatik olustur"><i class="fas fa-magic mr-1"></i>Varsayilan Alanlari Olustur</button>
+                        <button onclick="createDefaultFields()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium" title="Mevcut 4 form icin eksik varsayilan alanlari otomatik olustur"><i class="fas fa-magic mr-1"></i>Varsayilan Alanlari Olustur</button>
                     </div>
-                    <p class="text-sm text-slate-400 mb-4">Yeni form tipi ekle, mevcut formlara alan ekle/cikar, sirayi degistir.</p>
+                    <p class="text-sm text-slate-400 mb-4">Yeni form tipi ekle, mevcut formlari duzenle/sil, alan ekle/cikar, sirayi degistir.</p>
 
                     <!-- Yeni Form Tipi Ekle -->
                     <div class="rounded-lg border border-slate-700 p-4 mb-6">
-                        <h4 class="font-medium mb-3 text-slate-300">Yeni Form Tipi Ekle</h4>
+                        <h4 id="formTypeActionTitle" class="font-medium mb-3 text-slate-300">Yeni Form Tipi Ekle</h4>
                         <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
                             <input type="text" id="newFormTypeName" class="input-dark px-3 py-2 rounded-lg text-sm" placeholder="Form adi (orn: Bakim)">
                             <input type="text" id="newFormTypeSlug" class="input-dark px-3 py-2 rounded-lg text-sm" placeholder="Slug (orn: bakim)">
@@ -242,9 +242,10 @@
                                 <option value="blue">Mavi</option><option value="green">Yesil</option><option value="orange">Turuncu</option>
                                 <option value="purple">Mor</option><option value="red">Kirmizi</option><option value="yellow">Sari</option>
                             </select>
-                            <button onclick="addFormType()" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus mr-1"></i>Form Ekle</button>
+                            <button id="formTypeActionBtn" onclick="addFormType()" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus mr-1"></i>Form Ekle</button>
                         </div>
                         <input type="text" id="newFormTypeDesc" class="input-dark w-full mt-2 px-3 py-2 rounded-lg text-sm" placeholder="Aciklama (orn: Bakim operasyon girisi)">
+                        <button id="cancelEditBtn" onclick="cancelFormTypeEdit()" class="hidden mt-2 px-4 py-1.5 rounded-lg bg-slate-600 hover:bg-slate-500 text-xs font-medium"><i class="fas fa-times mr-1"></i>Iptal (Duzenleme Modundan Cik)</button>
                     </div>
 
                     <div id="formTypesList" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
@@ -319,6 +320,7 @@
         let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
         let formTypes = [], formFields = [];
         let selectedFormTypeId = null;
+        let editingFormTypeId = null;
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -831,7 +833,7 @@
             await loadDrillingTypesList(); await loadDrillingTypes();
         }
 
-        // ========== FORM YONETIMI ==========
+        // ========== FORM YONETIMI (GUNCELLENMIS) ==========
         async function loadFormTypesAdmin() {
             const { data } = await db.from('form_types').select('*').order('sort_order');
             formTypes = data || [];
@@ -845,14 +847,17 @@
             container.innerHTML = formTypes.map(t => {
                 const fieldCount = formFields.filter(f => f.form_type_id === t.id && !f.parent_field_id).length;
                 return `<div class="glass rounded-lg p-4 cursor-pointer hover:border-${t.color || 'blue'}-500/50 transition border border-transparent relative group" onclick="showFormFields('${t.id}')">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 pr-20">
                         <i class="fas ${t.icon || 'fa-circle'} text-${t.color || 'blue'}-400"></i>
-                        <div class="flex-1">
-                            <div class="font-medium">${t.name}</div>
-                            <div class="text-xs text-slate-400">${fieldCount} alan</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-medium truncate">${t.name}</div>
+                            <div class="text-xs text-slate-400 truncate">${fieldCount} alan | Slug: ${t.slug}</div>
                         </div>
                     </div>
-                    <button onclick="event.stopPropagation(); deleteFormType('${t.id}')" class="absolute top-2 right-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition" title="Formu sil"><i class="fas fa-trash-alt text-xs"></i></button>
+                    <div class="flex gap-1 absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition">
+                        <button onclick="event.stopPropagation(); editFormType('${t.id}')" class="text-blue-400 hover:text-blue-300 bg-slate-800/80 hover:bg-slate-700 px-2 py-1 rounded transition" title="Formu Duzenle"><i class="fas fa-edit text-xs"></i></button>
+                        <button onclick="event.stopPropagation(); deleteFormType('${t.id}')" class="text-red-400 hover:text-red-300 bg-slate-800/80 hover:bg-slate-700 px-2 py-1 rounded transition" title="Formu Sil"><i class="fas fa-trash-alt text-xs"></i></button>
+                    </div>
                 </div>`;
             }).join('');
         }
@@ -867,24 +872,83 @@
             const { error } = await db.from('form_types').insert([{ name, slug, icon, color, description: desc, sort_order: formTypes.length + 1 }]);
             if (error) alert('Hata: ' + error.message);
             else {
-                document.getElementById('newFormTypeName').value = '';
-                document.getElementById('newFormTypeSlug').value = '';
-                document.getElementById('newFormTypeIcon').value = '';
-                document.getElementById('newFormTypeDesc').value = '';
+                resetFormTypeInput();
                 await loadFormTypesAdmin();
             }
         }
 
+        // YENI: Duzenleme Fonksiyonlari
+        function editFormType(id) {
+            const form = formTypes.find(t => t.id === id);
+            if (!form) return;
+            editingFormTypeId = id;
+            
+            document.getElementById('newFormTypeName').value = form.name;
+            document.getElementById('newFormTypeSlug').value = form.slug;
+            document.getElementById('newFormTypeIcon').value = form.icon;
+            document.getElementById('newFormTypeColor').value = form.color || 'blue';
+            document.getElementById('newFormTypeDesc').value = form.description || '';
+            
+            document.getElementById('formTypeActionTitle').innerHTML = '<i class="fas fa-edit mr-2 text-blue-400"></i>Form Duzenle: ' + form.name;
+            
+            const btn = document.getElementById('formTypeActionBtn');
+            btn.innerHTML = '<i class="fas fa-save mr-1"></i>Guncelle';
+            btn.setAttribute('onclick', 'updateFormType()');
+            btn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            
+            document.getElementById('newFormTypeName').scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+
+        async function updateFormType() {
+            const name = document.getElementById('newFormTypeName').value.trim();
+            const slug = document.getElementById('newFormTypeSlug').value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            const icon = document.getElementById('newFormTypeIcon').value.trim() || 'fa-circle';
+            const color = document.getElementById('newFormTypeColor').value;
+            const desc = document.getElementById('newFormTypeDesc').value.trim();
+            
+            if (!name || !slug || !editingFormTypeId) return alert('Gecersiz islem');
+
+            const { error } = await db.from('form_types').update({ name, slug, icon, color, description: desc }).eq('id', editingFormTypeId);
+            if (error) return alert('Guncelleme Hatasi: ' + error.message);
+
+            alert('Form basariyla guncellendi!');
+            resetFormTypeInput();
+            await loadFormTypesAdmin();
+        }
+
+        function cancelFormTypeEdit() {
+            resetFormTypeInput();
+        }
+
+        function resetFormTypeInput() {
+            editingFormTypeId = null;
+            document.getElementById('newFormTypeName').value = '';
+            document.getElementById('newFormTypeSlug').value = '';
+            document.getElementById('newFormTypeIcon').value = '';
+            document.getElementById('newFormTypeColor').value = 'blue';
+            document.getElementById('newFormTypeDesc').value = '';
+            document.getElementById('formTypeActionTitle').innerHTML = 'Yeni Form Tipi Ekle';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+            
+            const btn = document.getElementById('formTypeActionBtn');
+            btn.innerHTML = '<i class="fas fa-plus mr-1"></i>Form Ekle';
+            btn.setAttribute('onclick', 'addFormType()');
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.add('bg-green-600', 'hover:bg-green-700');
+        }
+
         async function deleteFormType(id) {
             if (!confirm('Bu form tipini ve TUM alanlarini sil? Bu form tipiyle girilmis kayitlar silinmez.')) return;
-            // Once alanlari sil
             await db.from('form_fields').delete().eq('form_type_id', id);
-            // Sonra form tipini sil
             const { data, error } = await db.from('form_types').delete().eq('id', id).select();
             if (error) return alert('Silme hatasi: ' + error.message);
             if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('form_types'));
             await loadFormTypesAdmin();
             if (selectedFormTypeId === id) closeFormFieldsPanel();
+            if (editingFormTypeId === id) resetFormTypeInput();
         }
 
         async function showFormFields(formTypeId) {
@@ -939,7 +1003,6 @@
             if (idx <= 0) return;
             const prev = data[idx - 1];
             const curr = data[idx];
-            // Swap sort_order
             const temp = curr.sort_order;
             await db.from('form_fields').update({ sort_order: prev.sort_order }).eq('id', curr.id);
             await db.from('form_fields').update({ sort_order: temp }).eq('id', prev.id);
@@ -1030,90 +1093,93 @@
 
         async function deleteFormField(id) {
             if (!confirm('Alani sil? Bu alan formdan kaldirilacak.')) return;
-            // Once child alanlari sil
             await db.from('form_fields').delete().eq('parent_field_id', id);
-            // Sonra alani sil
             const { error } = await db.from('form_fields').delete().eq('id', id);
             if (error) alert('Hata: ' + error.message);
             else { await loadFormFieldsList(selectedFormTypeId); await loadFormTypesAdmin(); }
         }
 
+        // YENI: Slug bazli dinamik varsayilan alan olusturucu (HATA DUZELTILDI)
         async function createDefaultFields() {
-            if (!confirm('Mevcut 4 form (Sondaj, Malzeme, Cevher/Pasa, Loder) icin varsayilan alanlari olustur? Mevcut alanlar degismez, eksikler eklenir.')) return;
+            if (!confirm('Mevcut 4 form (Sondaj, Malzeme, Cevher/Pasa, Loder) icin eksik olan varsayilan alanlari olustur? Mevcut alanlariniz silinmez.')) return;
+
+            const { data: currentForms } = await db.from('form_types').select('id, slug, name');
+            if (!currentForms) return alert('Form tipleri yuklenemedi.');
 
             const defaults = [
                 // Drilling
-                { ft: '11111111-1111-1111-1111-111111111111', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
-                { ft: '11111111-1111-1111-1111-111111111111', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
-                { ft: '11111111-1111-1111-1111-111111111111', label: 'Delgi Tipi', key: 'drilling_type', type: 'select', req: true, w: 'full', so: 3, src: 'drilling_types' },
+                { slug: 'drilling', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { slug: 'drilling', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { slug: 'drilling', label: 'Delgi Tipi', key: 'drilling_type', type: 'select', req: true, w: 'full', so: 3, src: 'drilling_types' },
                 // Material
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Malzeme Kalemleri', key: 'material_items', type: 'text', req: true, w: 'full', so: 3, rep: true },
-                // Material children
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Kategori', key: 'category_id', type: 'select', req: true, w: 'full', so: 4, src: 'categories', par: 'material_items' },
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Malzeme', key: 'material_id', type: 'select', req: true, w: 'full', so: 5, src: 'materials', par: 'material_items' },
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Miktar', key: 'quantity', type: 'number', req: true, w: 'full', so: 6, par: 'material_items' },
-                { ft: '22222222-2222-2222-2222-222222222222', label: 'Birim', key: 'unit', type: 'select', req: true, w: 'full', so: 7, par: 'material_items', opts: [{label:'Adet',value:'adet'},{label:'Kg',value:'kg'},{label:'Lt',value:'lt'},{label:'Mt',value:'mt'}] },
+                { slug: 'material', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { slug: 'material', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { slug: 'material', label: 'Malzeme Kalemleri', key: 'material_items', type: 'text', req: true, w: 'full', so: 3, rep: true },
+                { slug: 'material', label: 'Kategori', key: 'category_id', type: 'select', req: true, w: 'full', so: 4, src: 'categories', par: 'material_items' },
+                { slug: 'material', label: 'Malzeme', key: 'material_id', type: 'select', req: true, w: 'full', so: 5, src: 'materials', par: 'material_items' },
+                { slug: 'material', label: 'Miktar', key: 'quantity', type: 'number', req: true, w: 'full', so: 6, par: 'material_items' },
+                { slug: 'material', label: 'Birim', key: 'unit', type: 'select', req: true, w: 'full', so: 7, par: 'material_items', opts: [{label:'Adet',value:'adet'},{label:'Kg',value:'kg'},{label:'Lt',value:'lt'},{label:'Mt',value:'mt'}] },
                 // Ore
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Cevher Iceri', key: 'cevher_iceri', type: 'number', req: false, w: 'half', so: 3 },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Cevher Disari', key: 'cevher_disari', type: 'number', req: false, w: 'half', so: 4 },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Pasa Iceri', key: 'pasa_iceri', type: 'number', req: false, w: 'half', so: 5 },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Pasa Disari', key: 'pasa_disari', type: 'number', req: false, w: 'half', so: 6 },
-                { ft: '33333333-3333-3333-3333-333333333333', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
+                { slug: 'ore', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { slug: 'ore', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { slug: 'ore', label: 'Cevher Iceri', key: 'cevher_iceri', type: 'number', req: false, w: 'half', so: 3 },
+                { slug: 'ore', label: 'Cevher Disari', key: 'cevher_disari', type: 'number', req: false, w: 'half', so: 4 },
+                { slug: 'ore', label: 'Pasa Iceri', key: 'pasa_iceri', type: 'number', req: false, w: 'half', so: 5 },
+                { slug: 'ore', label: 'Pasa Disari', key: 'pasa_disari', type: 'number', req: false, w: 'half', so: 6 },
+                { slug: 'ore', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
                 // Loder
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Kepce No', key: 'loader', type: 'select', req: true, w: 'half', so: 2, src: 'loaders' },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Calisma Alani', key: 'location', type: 'select', req: true, w: 'half', so: 3, src: 'locations' },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Calisma Saati', key: 'hours', type: 'number', req: true, w: 'half', so: 4, ph: '7.5' },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Cevher Kova', key: 'cevher_kovasi', type: 'number', req: false, w: 'half', so: 5, ph: '0' },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Pasa Kova', key: 'pasa_kovasi', type: 'number', req: false, w: 'half', so: 6, ph: '0' },
-                { ft: '44444444-4444-4444-4444-444444444444', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
+                { slug: 'loder', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { slug: 'loder', label: 'Kepce No', key: 'loader', type: 'select', req: true, w: 'half', so: 2, src: 'loaders' },
+                { slug: 'loder', label: 'Calisma Alani', key: 'location', type: 'select', req: true, w: 'half', so: 3, src: 'locations' },
+                { slug: 'loder', label: 'Calisma Saati', key: 'hours', type: 'number', req: true, w: 'half', so: 4, ph: '7.5' },
+                { slug: 'loder', label: 'Cevher Kova', key: 'cevher_kovasi', type: 'number', req: false, w: 'half', so: 5, ph: '0' },
+                { slug: 'loder', label: 'Pasa Kova', key: 'pasa_kovasi', type: 'number', req: false, w: 'half', so: 6, ph: '0' },
+                { slug: 'loder', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] }
             ];
 
-            const { data: existing } = await db.from('form_fields').select('key,form_type_id');
-            const existingKeys = new Set((existing || []).map(e => e.form_type_id + ':' + e.key));
+            const { data: existingFields } = await db.from('form_fields').select('key, form_type_id, id, parent_field_id');
+            const existingMap = {};
+            (existingFields || []).forEach(f => {
+                if (!existingMap[f.form_type_id]) existingMap[f.form_type_id] = new Set();
+                existingMap[f.form_type_id].add(f.key);
+            });
 
             const toInsert = [];
             for (const d of defaults) {
-                const uniqueKey = d.ft + ':' + d.key;
-                if (existingKeys.has(uniqueKey)) continue;
-                const row = {
-                    form_type_id: d.ft,
-                    label: d.label,
-                    key: d.key,
-                    field_type: d.type,
-                    placeholder: d.ph || '',
-                    required: d.req,
-                    width: d.w,
-                    sort_order: d.so,
-                    is_repeating: d.rep || false,
-                    options_source: d.src || null,
-                    options_json: d.opts || []
-                };
-                toInsert.push(row);
-            }
+                const formType = currentForms.find(f => f.slug === d.slug);
+                if (!formType) continue;
 
-            if (toInsert.length === 0) { alert('Tum varsayilan alanlar zaten mevcut!'); return; }
-
-            const { error } = await db.from('form_fields').insert(toInsert);
-            if (error) { alert('Hata: ' + error.message); return; }
-
-            const { data: allFields } = await db.from('form_fields').select('*');
-            const materialItems = allFields.find(f => f.key === 'material_items' && f.form_type_id === '22222222-2222-2222-2222-222222222222');
-            if (materialItems) {
-                const children = allFields.filter(f => 
-                    f.form_type_id === '22222222-2222-2222-2222-222222222222' && 
-                    ['category_id','material_id','quantity','unit'].includes(f.key)
-                );
-                for (const child of children) {
-                    await db.from('form_fields').update({ parent_field_id: materialItems.id }).eq('id', child.id);
+                if (!existingMap[formType.id] || !existingMap[formType.id].has(d.key)) {
+                    toInsert.push({
+                        form_type_id: formType.id, label: d.label, key: d.key, field_type: d.type,
+                        placeholder: d.ph || '', required: d.req, width: d.w, sort_order: d.so,
+                        is_repeating: d.rep || false, options_source: d.src || null,
+                        options_json: d.opts || [], parent_field_id: null
+                    });
                 }
             }
 
-            alert(toInsert.length + ' varsayilan alan olusturuldu!');
+            if (toInsert.length === 0) { alert('Tum varsayilan alanlar zaten mevcut! Hic eksik yok.'); return; }
+
+            const { data: inserted, error } = await db.from('form_fields').insert(toInsert).select();
+            if (error) return alert('Hata: ' + error.message);
+
+            // Material parent-child iliskisini duzelt
+            const allFields = [...(existingFields || []), ...(inserted || [])];
+            const materialForm = currentForms.find(f => f.slug === 'material');
+            if (materialForm) {
+                const materialItems = allFields.find(f => f.key === 'material_items' && f.form_type_id === materialForm.id);
+                if (materialItems) {
+                    const childrenKeys = ['category_id','material_id','quantity','unit'];
+                    const children = allFields.filter(f => f.form_type_id === materialForm.id && childrenKeys.includes(f.key));
+                    for (const child of children) {
+                        if (child.parent_field_id !== materialItems.id) {
+                            await db.from('form_fields').update({ parent_field_id: materialItems.id }).eq('id', child.id);
+                        }
+                    }
+                }
+            }
+            alert((inserted || []).length + ' yeni eksik alan basariyla olusturuldu!');
             await loadFormTypesAdmin();
             if (selectedFormTypeId) await loadFormFieldsList(selectedFormTypeId);
         }
