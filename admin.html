@@ -31,8 +31,9 @@
         .btn-outline:hover { background: #334155; }
         .field-row { transition: all 0.2s; }
         .field-row:hover { background: rgba(51,65,85,0.3); }
+        .sort-btn { opacity: 0.5; transition: opacity 0.2s; }
+        .sort-btn:hover { opacity: 1; }
     </style>
-<base target="_blank">
 <base target="_blank">
 </head>
 <body class="min-h-screen">
@@ -222,13 +223,29 @@
                     <div id="loadersList" class="space-y-2 max-w-md border border-slate-700 rounded p-3"></div>
                 </div>
 
-                <!-- YENI: FORM YONETIMI -->
+                <!-- FORM YONETIMI -->
                 <div class="glass rounded-xl p-6 mt-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-bold"><i class="fas fa-layer-group mr-2 text-green-400"></i>Form Yonetimi</h3>
                         <button onclick="createDefaultFields()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium" title="Mevcut 4 form icin varsayilan alanlari otomatik olustur"><i class="fas fa-magic mr-1"></i>Varsayilan Alanlari Olustur</button>
                     </div>
-                    <p class="text-sm text-slate-400 mb-4">Formlara kod yazmadan alan ekleyip cikarabilirsin. Bir forma tikla, alanlari gor, yeni alan ekle.</p>
+                    <p class="text-sm text-slate-400 mb-4">Yeni form tipi ekle, mevcut formlara alan ekle/cikar, sirayi degistir.</p>
+
+                    <!-- Yeni Form Tipi Ekle -->
+                    <div class="rounded-lg border border-slate-700 p-4 mb-6">
+                        <h4 class="font-medium mb-3 text-slate-300">Yeni Form Tipi Ekle</h4>
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                            <input type="text" id="newFormTypeName" class="input-dark px-3 py-2 rounded-lg text-sm" placeholder="Form adi (orn: Bakim)">
+                            <input type="text" id="newFormTypeSlug" class="input-dark px-3 py-2 rounded-lg text-sm" placeholder="Slug (orn: bakim)">
+                            <input type="text" id="newFormTypeIcon" class="input-dark px-3 py-2 rounded-lg text-sm" placeholder="Icon (orn: fa-wrench)">
+                            <select id="newFormTypeColor" class="input-dark px-3 py-2 rounded-lg text-sm">
+                                <option value="blue">Mavi</option><option value="green">Yesil</option><option value="orange">Turuncu</option>
+                                <option value="purple">Mor</option><option value="red">Kirmizi</option><option value="yellow">Sari</option>
+                            </select>
+                            <button onclick="addFormType()" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus mr-1"></i>Form Ekle</button>
+                        </div>
+                        <input type="text" id="newFormTypeDesc" class="input-dark w-full mt-2 px-3 py-2 rounded-lg text-sm" placeholder="Aciklama (orn: Bakim operasyon girisi)">
+                    </div>
 
                     <div id="formTypesList" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
 
@@ -259,6 +276,7 @@
                                 </select>
                                 <input type="text" id="newFieldPlaceholder" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Placeholder (orn: Ahmet Yilmaz)">
                                 <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="newFieldRequired" class="rounded bg-slate-700 border-slate-600"> Zorunlu alan</label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="newFieldRepeating" class="rounded bg-slate-700 border-slate-600"> Tekrarlanabilir grup</label>
 
                                 <div id="newFieldOptionsPanel" class="hidden space-y-2 border-t border-slate-700 pt-3 mt-2">
                                     <p class="text-xs text-slate-400 font-medium">Liste Kaynagi</p>
@@ -821,21 +839,52 @@
             formFields = fields || [];
             const container = document.getElementById('formTypesList');
             if (!formTypes.length) {
-                container.innerHTML = '<p class="text-slate-500 col-span-4">Henuez form tipi yok. SQL migration calistirin.</p>';
+                container.innerHTML = '<p class="text-slate-500 col-span-4">Henuez form tipi yok. Yukaridan ekleyin.</p>';
                 return;
             }
             container.innerHTML = formTypes.map(t => {
                 const fieldCount = formFields.filter(f => f.form_type_id === t.id && !f.parent_field_id).length;
-                return `<div class="glass rounded-lg p-4 cursor-pointer hover:border-${t.color || 'blue'}-500/50 transition border border-transparent" onclick="showFormFields('${t.id}')">
+                return `<div class="glass rounded-lg p-4 cursor-pointer hover:border-${t.color || 'blue'}-500/50 transition border border-transparent relative group" onclick="showFormFields('${t.id}')">
                     <div class="flex items-center gap-3">
                         <i class="fas ${t.icon || 'fa-circle'} text-${t.color || 'blue'}-400"></i>
-                        <div>
+                        <div class="flex-1">
                             <div class="font-medium">${t.name}</div>
                             <div class="text-xs text-slate-400">${fieldCount} alan</div>
                         </div>
                     </div>
+                    <button onclick="event.stopPropagation(); deleteFormType('${t.id}')" class="absolute top-2 right-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition" title="Formu sil"><i class="fas fa-trash-alt text-xs"></i></button>
                 </div>`;
             }).join('');
+        }
+
+        async function addFormType() {
+            const name = document.getElementById('newFormTypeName').value.trim();
+            const slug = document.getElementById('newFormTypeSlug').value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            const icon = document.getElementById('newFormTypeIcon').value.trim() || 'fa-circle';
+            const color = document.getElementById('newFormTypeColor').value;
+            const desc = document.getElementById('newFormTypeDesc').value.trim();
+            if (!name || !slug) return alert('Form adi ve slug gerekli');
+            const { error } = await db.from('form_types').insert([{ name, slug, icon, color, description: desc, sort_order: formTypes.length + 1 }]);
+            if (error) alert('Hata: ' + error.message);
+            else {
+                document.getElementById('newFormTypeName').value = '';
+                document.getElementById('newFormTypeSlug').value = '';
+                document.getElementById('newFormTypeIcon').value = '';
+                document.getElementById('newFormTypeDesc').value = '';
+                await loadFormTypesAdmin();
+            }
+        }
+
+        async function deleteFormType(id) {
+            if (!confirm('Bu form tipini ve TUM alanlarini sil? Bu form tipiyle girilmis kayitlar silinmez.')) return;
+            // Once alanlari sil
+            await db.from('form_fields').delete().eq('form_type_id', id);
+            // Sonra form tipini sil
+            const { data, error } = await db.from('form_types').delete().eq('id', id).select();
+            if (error) return alert('Silme hatasi: ' + error.message);
+            if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('form_types'));
+            await loadFormTypesAdmin();
+            if (selectedFormTypeId === id) closeFormFieldsPanel();
         }
 
         async function showFormFields(formTypeId) {
@@ -858,21 +907,56 @@
                 container.innerHTML = '<p class="text-slate-500 text-sm">Henuez alan tanimlanmamis.</p>';
                 return;
             }
-            container.innerHTML = data.map(f => {
+            container.innerHTML = data.map((f, idx) => {
                 let opts = '';
                 if (f.field_type === 'select') {
                     if (f.options_source) opts = ' | Kaynak: ' + f.options_source;
                     else if (f.options_json && f.options_json.length) opts = ' | ' + f.options_json.length + ' secenek';
                 }
-                return `<div class="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
-                    <div>
-                        <span class="font-medium">${f.label}</span>
-                        <span class="text-xs text-slate-400 ml-2">(${f.key}, ${f.field_type}${f.width === 'half' ? ', yari' : ''})${opts}</span>
-                        ${f.required ? '<span class="text-xs text-red-400 ml-1">*</span>' : ''}
+                const isFirst = idx === 0;
+                const isLast = idx === data.length - 1;
+                return `<div class="flex justify-between items-center p-3 bg-slate-800 rounded-lg" data-field-id="${f.id}">
+                    <div class="flex items-center gap-3">
+                        <div class="flex flex-col gap-0.5">
+                            <button onclick="moveFieldUp('${f.id}')" class="sort-btn text-slate-500 hover:text-white ${isFirst ? 'invisible' : ''}" title="Yukari"><i class="fas fa-chevron-up text-xs"></i></button>
+                            <button onclick="moveFieldDown('${f.id}')" class="sort-btn text-slate-500 hover:text-white ${isLast ? 'invisible' : ''}" title="Asagi"><i class="fas fa-chevron-down text-xs"></i></button>
+                        </div>
+                        <div>
+                            <span class="font-medium">${f.label}</span>
+                            <span class="text-xs text-slate-400 ml-2">(${f.key}, ${f.field_type}${f.width === 'half' ? ', yari' : ''}${f.is_repeating ? ', tekrar' : ''})${opts}</span>
+                            ${f.required ? '<span class="text-xs text-red-400 ml-1">*</span>' : ''}
+                        </div>
                     </div>
                     <button onclick="deleteFormField('${f.id}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash-alt"></i></button>
                 </div>`;
             }).join('');
+        }
+
+        async function moveFieldUp(fieldId) {
+            const fields = await db.from('form_fields').select('*').eq('form_type_id', selectedFormTypeId).order('sort_order');
+            const data = fields.data || [];
+            const idx = data.findIndex(f => f.id === fieldId);
+            if (idx <= 0) return;
+            const prev = data[idx - 1];
+            const curr = data[idx];
+            // Swap sort_order
+            const temp = curr.sort_order;
+            await db.from('form_fields').update({ sort_order: prev.sort_order }).eq('id', curr.id);
+            await db.from('form_fields').update({ sort_order: temp }).eq('id', prev.id);
+            await loadFormFieldsList(selectedFormTypeId);
+        }
+
+        async function moveFieldDown(fieldId) {
+            const fields = await db.from('form_fields').select('*').eq('form_type_id', selectedFormTypeId).order('sort_order');
+            const data = fields.data || [];
+            const idx = data.findIndex(f => f.id === fieldId);
+            if (idx < 0 || idx >= data.length - 1) return;
+            const next = data[idx + 1];
+            const curr = data[idx];
+            const temp = curr.sort_order;
+            await db.from('form_fields').update({ sort_order: next.sort_order }).eq('id', curr.id);
+            await db.from('form_fields').update({ sort_order: temp }).eq('id', next.id);
+            await loadFormFieldsList(selectedFormTypeId);
         }
 
         function toggleFieldOptions() {
@@ -906,6 +990,7 @@
             const width = document.getElementById('newFieldWidth').value;
             const placeholder = document.getElementById('newFieldPlaceholder').value.trim();
             const required = document.getElementById('newFieldRequired').checked;
+            const repeating = document.getElementById('newFieldRepeating').checked;
             if (!label || !key) return alert('Alan adi ve key gerekli');
 
             let optionsJson = [];
@@ -923,9 +1008,10 @@
             const { error } = await db.from('form_fields').insert([{
                 form_type_id: formTypeId,
                 label, key, field_type: type, placeholder, required, width,
-                options_json: optionsJson.length ? optionsJson : null,
+                options_json: optionsJson.length ? optionsJson : [],
                 options_source: optionsSource || null,
-                sort_order: 999
+                sort_order: 999,
+                is_repeating: repeating
             }]);
             if (error) alert('Hata: ' + error.message);
             else {
@@ -933,6 +1019,7 @@
                 document.getElementById('newFieldKey').value = '';
                 document.getElementById('newFieldPlaceholder').value = '';
                 document.getElementById('newFieldRequired').checked = false;
+                document.getElementById('newFieldRepeating').checked = false;
                 document.getElementById('newFieldType').value = 'text';
                 document.getElementById('newFieldOptionsPanel').classList.add('hidden');
                 document.getElementById('manualOptionsContainer').innerHTML = '<div class="flex gap-2"><input type="text" class="opt-label input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Etiket (orn: Gunduz)"><input type="text" class="opt-value input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Deger (orn: gunduz)"></div>';
@@ -943,6 +1030,9 @@
 
         async function deleteFormField(id) {
             if (!confirm('Alani sil? Bu alan formdan kaldirilacak.')) return;
+            // Once child alanlari sil
+            await db.from('form_fields').delete().eq('parent_field_id', id);
+            // Sonra alani sil
             const { error } = await db.from('form_fields').delete().eq('id', id);
             if (error) alert('Hata: ' + error.message);
             else { await loadFormFieldsList(selectedFormTypeId); await loadFormTypesAdmin(); }
@@ -983,17 +1073,13 @@
                 { ft: '44444444-4444-4444-4444-444444444444', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
             ];
 
-            // Once mevcut alanlari cek, var olanlari atla
             const { data: existing } = await db.from('form_fields').select('key,form_type_id');
             const existingKeys = new Set((existing || []).map(e => e.form_type_id + ':' + e.key));
 
             const toInsert = [];
-            const parentMap = {}; // key -> id mapping for parent fields
-
             for (const d of defaults) {
                 const uniqueKey = d.ft + ':' + d.key;
                 if (existingKeys.has(uniqueKey)) continue;
-
                 const row = {
                     form_type_id: d.ft,
                     label: d.label,
@@ -1005,19 +1091,16 @@
                     sort_order: d.so,
                     is_repeating: d.rep || false,
                     options_source: d.src || null,
-                    options_json: d.opts || null
+                    options_json: d.opts || []
                 };
                 toInsert.push(row);
             }
 
             if (toInsert.length === 0) { alert('Tum varsayilan alanlar zaten mevcut!'); return; }
 
-            // Insert parent fields first, then update children with parent_field_id
-            // But we need to handle parent-child relationship. For simplicity, insert all then update.
             const { error } = await db.from('form_fields').insert(toInsert);
             if (error) { alert('Hata: ' + error.message); return; }
 
-            // Now update parent_field_id for material children
             const { data: allFields } = await db.from('form_fields').select('*');
             const materialItems = allFields.find(f => f.key === 'material_items' && f.form_type_id === '22222222-2222-2222-2222-222222222222');
             if (materialItems) {
