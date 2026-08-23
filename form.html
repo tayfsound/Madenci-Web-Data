@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madenci Veri Giriş Portalı</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; }
+        .input-dark:focus { outline: none; border-color: #3b82f6; }
+        .btn-primary { background: linear-gradient(135deg, #10b981, #059669); }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .honeypot { position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; }
+        .entry-card { transition: all 0.2s; }
+        .entry-card:hover { transform: translateX(4px); border-left-color: #3b82f6; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+<base target="_blank">
+</head>
+<body class="min-h-screen">
+    <!-- Navbar -->
+    <nav class="glass sticky top-0 z-50 border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-hard-hat text-blue-500 text-xl"></i>
+                <span class="font-bold text-lg">Madenci Veri Giriş Portalı</span>
+            </div>
+            <a href="admin.html" class="text-sm text-slate-400 hover:text-white transition flex items-center gap-2">
+                <i class="fas fa-shield-alt text-yellow-500"></i>
+                <span class="hidden sm:inline">Admin Girişi</span>
+            </a>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Form Column -->
+            <div class="lg:col-span-2 space-y-6 fade-in">
+                <!-- Tabs -->
+                <div class="glass rounded-xl p-1 flex gap-1 overflow-x-auto">
+                    <button onclick="setTab('drilling')" id="tab-drilling" class="tab-active flex-1 py-3 px-4 rounded-lg text-sm font-medium whitespace-nowrap transition">
+                        <i class="fas fa-bullseye mr-2"></i>Sondaj / Delme
+                    </button>
+                    <button onclick="setTab('material')" id="tab-material" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
+                        <i class="fas fa-boxes mr-2"></i>Malzeme Kullanımı
+                    </button>
+                    <button onclick="setTab('ore')" id="tab-ore" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
+                        <i class="fas fa-dolly mr-2"></i>Lokomotif
+                    </button>
+                    <button onclick="setTab('loder')" id="tab-loder" class="flex-1 py-3 px-4 rounded-lg text-sm font-medium text-slate-400 hover:text-white whitespace-nowrap transition">
+                        <i class="fas fa-truck-pickup mr-2"></i>Loder
+                    </button>
+                </div>
+
+
+        <!-- Honeypot Captcha -->
+        <div class="honeypot">
+            <input type="text" id="website_url" name="website_url" tabindex="-1" autocomplete="off">
+        </div>
+                <!-- Drilling Form -->
+                <div id="form-drilling" class="glass rounded-xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-bullseye text-green-400"></i> Sondaj Raporu
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                            <input type="date" id="d_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                            <select id="d_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label>
+                            <select id="d_type" class="input-dark w-full px-3 py-2 rounded-lg" onchange="renderDrillingFields()">
+                                <option value="">Seç</option>
+                            </select>
+                        </div>
+                        <div id="d_dynamicFields" class="sm:col-span-2 grid sm:grid-cols-2 gap-4"></div>
+                        <div id="d_typeHint" class="sm:col-span-2 text-xs text-slate-500">
+                            Delgi tipini seçince o tipe ait alanlar açılır.
+                        </div>
+                    </div>
+                    <button onclick="submitEntry('drilling')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-save mr-2"></i>Kaydet
+                    </button>
+                </div>
+
+                <!-- Material Form -->
+                <div id="form-material" class="glass rounded-xl p-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-boxes text-green-400"></i> Malzeme Kullanımı
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                            <input type="date" id="m_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                            <select id="m_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-slate-300 mb-3">Malzeme Kalemleri</label>
+                        <div id="materialRows" class="space-y-3"></div>
+                        <button type="button" onclick="addMaterialRow()" class="mt-3 w-full py-3 rounded-lg border-2 border-dashed border-slate-600 hover:border-blue-500 text-slate-400 hover:text-blue-400 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-plus-circle text-xl"></i>
+                            <span class="font-medium">Malzeme Kalemi Ekle</span>
+                        </button>
+                    </div>
+                    <button onclick="submitEntry('material')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-save mr-2"></i>Kaydet
+                    </button>
+                </div>
+
+                <!-- Ore Form -->
+                <div id="form-ore" class="glass rounded-xl p-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-dolly text-green-400"></i> Cevher / Pasa Hareketi
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                            <input type="date" id="o_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Lokasyon</label>
+                            <select id="o_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
+                        </div>
+                        <div class="sm:col-span-2 rounded-lg border border-slate-700 border-l-4 border-l-orange-500 p-4">
+                            <div class="text-sm font-medium text-green-400 mb-3">Cevher</div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">İçeri Miktar</label>
+                                    <input type="number" id="o_cevher_iceri" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 24">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Dışarı Miktar</label>
+                                    <input type="number" id="o_cevher_disari" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 0">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2 rounded-lg border border-slate-700 border-l-4 border-l-slate-500 p-4">
+                            <div class="text-sm font-medium text-slate-300 mb-3">Pasa</div>
+                            <div class="grid sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">İçeri Miktar</label>
+                                    <input type="number" id="o_pasa_iceri" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 8">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-slate-400 mb-1">Dışarı Miktar</label>
+                                    <input type="number" id="o_pasa_disari" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2 text-xs text-slate-500 -mt-1">
+                            Birden fazla alanı doldurabilirsin; her dolu alan için ayrı kayıt oluşturulur.
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm text-slate-400 mb-1">Vardiya</label>
+                            <select id="o_shift" class="input-dark w-full px-3 py-2 rounded-lg">
+                                <option value="">Seç</option>
+                                <option value="gunduz">Gündüz</option>
+                                <option value="gece">Gece</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="submitEntry('ore')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-save mr-2"></i>Kaydet
+                    </button>
+                </div>
+
+                <!-- Loder Form -->
+                <div id="form-loder" class="glass rounded-xl p-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-truck-pickup text-green-400"></i> Loder Çalışması
+                    </h3>
+                    <div class="grid sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Tarih</label>
+                            <input type="date" id="ld_date" class="input-dark w-full px-3 py-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Kepçe No</label>
+                            <select id="ld_loader" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Çalışma Alanı</label>
+                            <select id="ld_location" class="input-dark w-full px-3 py-2 rounded-lg"><option value="">Seç</option></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-1">Çalışma Saati</label>
+                            <input type="number" step="0.5" id="ld_hours" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 7.5">
+                        </div>
+                        <div class="sm:col-span-2 grid sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Cevher Kova Sayısı</label>
+                                <input type="number" id="ld_cevher_kovasi" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 10">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-1">Pasa Kova Sayısı</label>
+                                <input type="number" id="ld_pasa_kovasi" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="örn: 0">
+                            </div>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-sm text-slate-400 mb-1">Vardiya</label>
+                            <select id="ld_shift" class="input-dark w-full px-3 py-2 rounded-lg">
+                                <option value="">Seç</option>
+                                <option value="gunduz">Gündüz</option>
+                                <option value="gece">Gece</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="submitEntry('loder')" class="btn-primary w-full mt-4 py-3 rounded-lg font-semibold hover:opacity-90 transition">
+                        <i class="fas fa-save mr-2"></i>Kaydet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="space-y-4 fade-in">
+                <div class="glass rounded-xl p-5">
+                    <h4 class="font-semibold mb-3 text-slate-300">Bugün Özeti</h4>
+                    <div id="todayStats" class="space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-slate-400">Sondaj:</span><span class="font-mono" id="statDrill">-</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Malzeme:</span><span class="font-mono" id="statMat">-</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Cevher/Pasa:</span><span class="font-mono" id="statOre">-</span></div>
+                        <div class="flex justify-between"><span class="text-slate-400">Loder:</span><span class="font-mono" id="statLoder">-</span></div>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-5">
+                    <h4 class="font-semibold mb-3 text-slate-300">Son Kayıtlar</h4>
+                    <div id="recentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm">
+                        <p class="text-slate-500 text-center py-4">Kayıt yok</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIG ====================
+        const SUPABASE_URL = 'https://cxvrcqkkxfblpxzynfya.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentTab = 'drilling';
+
+        // Global data
+        let categories = [];
+        let materialsByCategory = {};
+        let locations = [];
+        let drillingTypes = [];
+        let loaders = [];
+
+        const LEGACY_FIELD_LABELS = {
+            atis_sayisi:  { label: 'Atış Sayısı',  type: 'number' },
+            sira_no:      { label: 'Sıra No',      type: 'text' },
+            delik_sayisi: { label: 'Delik Sayısı', type: 'number' },
+            metre:        { label: 'Metre',        type: 'number' },
+            not:          { label: 'Not',        type: 'text' }
+        };
+
+        // ==================== INIT ====================
+        async function initApp() {
+            await loadCategoriesAndMaterials();
+            await loadDrillingTypes();
+            await loadLoaders();
+
+            const today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+
+            loadTodayStats();
+            loadRecentEntries();
+        }
+
+        // ==================== DATA LOADERS ====================
+        async function loadCategoriesAndMaterials() {
+            const { data: cats } = await db.from('categories').select('*').order('name');
+            if (cats) categories = cats;
+
+            const { data: mats } = await db.from('materials').select('*').order('name');
+            if (mats) {
+                materialsByCategory = {};
+                mats.forEach(mat => {
+                    if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = [];
+                    materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name });
+                });
+            }
+
+            const { data: locs } = await db.from('locations').select('*').order('name');
+            if (locs) {
+                locations = locs;
+                ['d_location', 'm_location', 'o_location', 'ld_location'].forEach(id => {
+                    const select = document.getElementById(id);
+                    if (select) {
+                        select.innerHTML = '<option value="">Seç</option>';
+                        locs.forEach(loc => {
+                            const opt = document.createElement('option');
+                            opt.value = loc.name;
+                            opt.textContent = loc.name;
+                            select.appendChild(opt);
+                        });
+                    }
+                });
+            }
+        }
+
+        async function loadLoaders() {
+            const { data } = await db.from('loaders').select('*').order('name');
+            loaders = data || [];
+            const select = document.getElementById('ld_loader');
+            select.innerHTML = '<option value="">Seç</option>';
+            loaders.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l.id;
+                opt.textContent = l.name;
+                select.appendChild(opt);
+            });
+        }
+
+        async function loadDrillingTypes() {
+            const { data: types } = await db.from('drilling_types').select('*').order('name');
+            drillingTypes = types || [];
+            const select = document.getElementById('d_type');
+            select.innerHTML = '<option value="">Seç</option>';
+            drillingTypes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = t.name;
+                select.appendChild(opt);
+            });
+            renderDrillingFields();
+        }
+
+        // ==================== DRILLING FIELDS ====================
+        function renderDrillingFields() {
+            const kapsayici = document.getElementById('d_dynamicFields');
+            const ipucu = document.getElementById('d_typeHint');
+            const oncekiDegerler = {};
+            kapsayici.querySelectorAll('[data-alan]').forEach(el => {
+                if (el.value) oncekiDegerler[el.dataset.alan] = el.value;
+            });
+            kapsayici.innerHTML = '';
+
+            const tip = drillingTypes.find(t => t.id === document.getElementById('d_type').value);
+            if (!tip) {
+                ipucu.textContent = drillingTypes.length === 0
+                    ? 'Henüz delgi tipi tanımlanmamış. Admin panelinden ekleyebilirsin.'
+                    : 'Delgi tipini seçince o tipe ait alanlar açılır.';
+                ipucu.classList.remove('hidden');
+                return;
+            }
+
+            let alanlar = [];
+            if (Array.isArray(tip.fields)) {
+                if (tip.fields.length > 0 && typeof tip.fields[0] === 'string') {
+                    alanlar = tip.fields.map(key => {
+                        const legacy = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text', placeholder: '' };
+                        return { key, label: legacy.label, type: legacy.type, placeholder: legacy.placeholder || '' };
+                    });
+                } else {
+                    alanlar = tip.fields;
+                }
+            }
+
+            if (alanlar.length === 0) {
+                ipucu.textContent = '"' + tip.name + '" tipine hiç alan atanmamış. Admin panelinden alan ekle.';
+                ipucu.classList.remove('hidden');
+                return;
+            }
+            ipucu.classList.add('hidden');
+
+            alanlar.forEach(alan => {
+                const sarmal = document.createElement('div');
+                sarmal.className = 'sm:col-span-1';
+                const etiket = document.createElement('label');
+                etiket.className = 'block text-sm text-slate-400 mb-1';
+                etiket.textContent = alan.label;
+                const girdi = document.createElement('input');
+                girdi.type = alan.type || 'text';
+                girdi.className = 'input-dark w-full px-3 py-2 rounded-lg';
+                girdi.placeholder = alan.placeholder || '';
+                girdi.dataset.alan = alan.key;
+                if (oncekiDegerler[alan.key]) girdi.value = oncekiDegerler[alan.key];
+                sarmal.appendChild(etiket);
+                sarmal.appendChild(girdi);
+                kapsayici.appendChild(sarmal);
+            });
+        }
+
+        // ==================== MATERIAL ROWS ====================
+        function addMaterialRow(data = null) {
+            const row = document.createElement('div');
+            row.className = 'material-row grid sm:grid-cols-4 gap-2 mb-2 items-center';
+
+            const catSelect = document.createElement('select');
+            catSelect.className = 'm-cat input-dark w-full px-3 py-2 rounded-lg';
+            catSelect.innerHTML = '<option value="">Kategori</option>';
+            categories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                catSelect.appendChild(opt);
+            });
+            catSelect.addEventListener('change', function() { updateRowMaterials(this); });
+
+            const matSelect = document.createElement('select');
+            matSelect.className = 'm-name input-dark w-full px-3 py-2 rounded-lg';
+            matSelect.innerHTML = '<option value="">Malzeme</option>';
+
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.className = 'm-qty input-dark w-full px-3 py-2 rounded-lg';
+            qtyInput.placeholder = 'Miktar';
+
+            const unitSelect = document.createElement('select');
+            unitSelect.className = 'm-unit input-dark w-full px-3 py-2 rounded-lg';
+            unitSelect.innerHTML = '<option value="adet">Adet</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option>';
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'text-red-400 hover:text-red-300 text-xl';
+            removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            removeBtn.addEventListener('click', function() { row.remove(); });
+
+            row.appendChild(catSelect);
+            row.appendChild(matSelect);
+            row.appendChild(qtyInput);
+            row.appendChild(unitSelect);
+            row.appendChild(removeBtn);
+
+            if (data) {
+                catSelect.value = data.category_id || '';
+                if (data.category_id) {
+                    updateRowMaterials(catSelect);
+                    matSelect.value = data.material_id || '';
+                }
+                qtyInput.value = data.quantity || '';
+                unitSelect.value = data.unit || 'adet';
+            }
+
+            document.getElementById('materialRows').appendChild(row);
+        }
+
+        function updateRowMaterials(catSelect) {
+            const row = catSelect.closest('.material-row');
+            const matSelect = row.querySelector('.m-name');
+            matSelect.innerHTML = '<option value="">Malzeme</option>';
+            const catId = catSelect.value;
+            if (catId && materialsByCategory[catId]) {
+                materialsByCategory[catId].forEach(mat => {
+                    const opt = document.createElement('option');
+                    opt.value = mat.id;
+                    opt.textContent = mat.name;
+                    matSelect.appendChild(opt);
+                });
+            }
+        }
+
+        // ==================== NAVIGATION ====================
+        function setTab(tab) {
+            currentTab = tab;
+            ['drilling', 'material', 'ore', 'loder'].forEach(t => {
+                document.getElementById('form-' + t).classList.add('hidden');
+                document.getElementById('tab-' + t).classList.remove('tab-active');
+                document.getElementById('tab-' + t).classList.add('text-slate-400');
+            });
+            document.getElementById('form-' + tab).classList.remove('hidden');
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            document.getElementById('tab-' + tab).classList.remove('text-slate-400');
+        }
+
+        // ==================== SUBMIT (NO AUTH) ====================
+        async function submitEntry(type) {
+        // Honeypot check
+        const hp = document.getElementById('website_url');
+        if (hp && hp.value.trim() !== '') { alert('Bot tespit edildi.'); return; }
+
+            let data = { date: '', location: '', details: {} };
+
+            if (type === 'drilling') {
+                const tipSelect = document.getElementById('d_type');
+                const tip = drillingTypes.find(t => t.id === tipSelect.value);
+                if (!tip) { alert('Delgi tipi seçin.'); return; }
+                data.date = document.getElementById('d_date').value;
+                data.location = document.getElementById('d_location').value;
+                data.details = { drilling_type_id: tip.id, drilling_type: tip.name };
+                document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => {
+                    if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value;
+                });
+            } else if (type === 'material') {
+                data.date = document.getElementById('m_date').value;
+                data.location = document.getElementById('m_location').value;
+                const rows = document.querySelectorAll('#materialRows .material-row');
+                const payload = [];
+                for (const row of rows) {
+                    const catSelect = row.querySelector('.m-cat');
+                    const matSelect = row.querySelector('.m-name');
+                    const qtyInput = row.querySelector('.m-qty');
+                    const unitSelect = row.querySelector('.m-unit');
+                    const qty = qtyInput.value.trim();
+                    if (!catSelect.value || !matSelect.value || !qty) continue;
+                    const catText = catSelect.options[catSelect.selectedIndex].text;
+                    const matText = matSelect.options[matSelect.selectedIndex].text;
+                    payload.push({
+                        date: data.date,
+                        entry_type: 'material',
+                        location: data.location,
+                        details: {
+                            category: catText, category_id: catSelect.value,
+                            name: matText, material_id: matSelect.value,
+                            quantity: qty, unit: unitSelect.value
+                        }
+                    });
+                }
+                if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
+                const { error } = await db.from('entries').insert(payload);
+                if (error) { alert('Hata: ' + error.message); }
+                else {
+                    document.getElementById('materialRows').innerHTML = '';
+                    loadTodayStats(); loadRecentEntries();
+                    alert(payload.length + ' malzeme kaydı eklendi!');
+                }
+                return;
+            } else if (type === 'ore') {
+                data.date = document.getElementById('o_date').value;
+                data.location = document.getElementById('o_location').value;
+                const shift = document.getElementById('o_shift').value;
+                const rows = [];
+                const cevherIceri = document.getElementById('o_cevher_iceri').value.trim();
+                const cevherDisari = document.getElementById('o_cevher_disari').value.trim();
+                const pasaIceri = document.getElementById('o_pasa_iceri').value.trim();
+                const pasaDisari = document.getElementById('o_pasa_disari').value.trim();
+                if (cevherIceri) rows.push({ type: 'cevher', quantity: cevherIceri, direction: 'iceri', shift });
+                if (cevherDisari) rows.push({ type: 'cevher', quantity: cevherDisari, direction: 'disari', shift });
+                if (pasaIceri) rows.push({ type: 'pasa', quantity: pasaIceri, direction: 'iceri', shift });
+                if (pasaDisari) rows.push({ type: 'pasa', quantity: pasaDisari, direction: 'disari', shift });
+                if (rows.length === 0) { alert('En az bir miktar girin.'); return; }
+                const payload = rows.map(details => ({
+                    date: data.date, entry_type: 'ore', location: data.location, details
+                }));
+                const { error } = await db.from('entries').insert(payload);
+                if (error) { alert('Hata: ' + error.message); }
+                else {
+                    document.getElementById('o_cevher_iceri').value = '';
+                    document.getElementById('o_cevher_disari').value = '';
+                    document.getElementById('o_pasa_iceri').value = '';
+                    document.getElementById('o_pasa_disari').value = '';
+                    loadTodayStats(); loadRecentEntries();
+                    alert(rows.length + ' hareket kaydedildi!');
+                }
+                return;
+            } else if (type === 'loder') {
+                const loderSelect = document.getElementById('ld_loader');
+                const loder = loaders.find(l => l.id === loderSelect.value);
+                if (!loder) { alert('Kepçe no seçin.'); return; }
+                const saat = document.getElementById('ld_hours').value.trim();
+                if (saat === '') { alert('Çalışma saati girin.'); return; }
+                data.date = document.getElementById('ld_date').value;
+                data.location = document.getElementById('ld_location').value;
+                data.details = {
+                    loader_id: loder.id, loader: loder.name, hours: saat,
+                    cevher_kovasi: document.getElementById('ld_cevher_kovasi').value.trim() || '0',
+                    pasa_kovasi: document.getElementById('ld_pasa_kovasi').value.trim() || '0',
+                    shift: document.getElementById('ld_shift').value
+                };
+            }
+
+            if (!data.date || !data.location) { alert('Tarih ve lokasyon zorunlu!'); return; }
+            const payload = [{ date: data.date, entry_type: type, location: data.location, details: data.details }];
+            const { error } = await db.from('entries').insert(payload);
+            if (error) { alert('Hata: ' + error.message); }
+            else {
+                document.querySelectorAll('.input-dark').forEach(el => {
+                    if (el.type !== 'date' && el.tagName !== 'SELECT') el.value = '';
+                });
+                loadTodayStats(); loadRecentEntries();
+                alert('Kaydedildi!');
+            }
+        }
+
+        // ==================== LOAD DATA (PUBLIC — NO USER FILTER) ====================
+        async function loadTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await db.from('entries').select('*').eq('date', today);
+            document.getElementById('statDrill').textContent = (data?.filter(e => e.entry_type === 'drilling').length || 0) + ' kayıt';
+            document.getElementById('statMat').textContent = (data?.filter(e => e.entry_type === 'material').length || 0) + ' kayıt';
+            document.getElementById('statOre').textContent = (data?.filter(e => e.entry_type === 'ore').length || 0) + ' kayıt';
+            document.getElementById('statLoder').textContent = (data?.filter(e => e.entry_type === 'loder').length || 0) + ' kayıt';
+        }
+
+        async function loadRecentEntries() {
+            const { data } = await db.from('entries')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(10);
+            const container = document.getElementById('recentEntries');
+            if (!data?.length) {
+                container.innerHTML = '<p class="text-slate-500 text-center py-4">Kayıt yok</p>';
+                return;
+            }
+            container.innerHTML = data.map(e => `
+                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(e.entry_type)}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs text-slate-400">${e.date}</span>
+                            <div class="font-medium">${e.location}</div>
+                            <div class="text-xs text-slate-400">${formatDetails(e)}</div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== HELPERS ====================
+        function getTypeLabel(type) {
+            return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher/Pasa', loder: 'Loder' }[type] || type;
+        }
+        function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
+        function shiftLabel(s) { return { gunduz: 'Gündüz', gece: 'Gece' }[s] || s; }
+        function getBorderColor(type) {
+            return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500';
+        }
+        function formatDetails(entry) {
+            const d = entry.details;
+            if (entry.entry_type === 'drilling') {
+                if (!d.drilling_type) return `${d.meter}m | Sıra ${d.row} | ${d.holes}`;
+                const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
+                let alanlar = [];
+                if (tip && Array.isArray(tip.fields)) {
+                    if (tip.fields.length > 0 && typeof tip.fields[0] === 'string') {
+                        alanlar = tip.fields.map(key => {
+                            const legacy = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text' };
+                            return { key, label: legacy.label };
+                        });
+                    } else {
+                        alanlar = tip.fields.map(f => ({ key: f.key, label: f.label }));
+                    }
+                } else {
+                    alanlar = Object.keys(d).filter(k => k !== 'drilling_type_id' && k !== 'drilling_type').map(k => ({
+                        key: k, label: LEGACY_FIELD_LABELS[k]?.label || k
+                    }));
+                }
+                const parcalar = [d.drilling_type];
+                alanlar.forEach(alan => {
+                    if (d[alan.key] !== undefined && d[alan.key] !== '') {
+                        parcalar.push(`${alan.label}: ${d[alan.key]}`);
+                    }
+                });
+                return parcalar.join(' | ');
+            }
+            if (entry.entry_type === 'material') return `${d.name}: ${d.quantity} ${d.unit} | ${d.category}`;
+            if (entry.entry_type === 'loder') {
+                let sonuc = `Kepçe ${d.loader} | ${d.hours} saat`;
+                if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc += ` | Cevher: ${d.cevher_kovasi} kova`;
+                if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc += ` | Pasa: ${d.pasa_kovasi} kova`;
+                if (d.shift) sonuc += ` | ${shiftLabel(d.shift)}`;
+                return sonuc;
+            }
+            if (entry.entry_type === 'ore') {
+                const yon = d.direction === 'iceri' ? 'İçeri' : 'Dışarı';
+                return `${oreTypeLabel(d.type)} ${d.quantity} ${yon} | ${d.shift ? shiftLabel(d.shift) : ''}`;
+            }
+            return JSON.stringify(d);
+        }
+
+        // ==================== INIT ====================
+        initApp();
+    </script>
+</body>
+</html>
