@@ -29,7 +29,10 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         .btn-outline { border: 1px solid #334155; background: transparent; }
         .btn-outline:hover { background: #334155; }
+        .field-row { transition: all 0.2s; }
+        .field-row:hover { background: rgba(51,65,85,0.3); }
     </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body class="min-h-screen">
@@ -122,7 +125,6 @@
                     <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Kullanici</label><input type="text" id="adminUser" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Ad soyad"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><input type="text" id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Lokasyon..."></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Detay Arama</label><input type="text" id="adminSearch" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi, delgi tipi vs."></div>
@@ -219,6 +221,71 @@
                     </div>
                     <div id="loadersList" class="space-y-2 max-w-md border border-slate-700 rounded p-3"></div>
                 </div>
+
+                <!-- YENI: FORM YONETIMI -->
+                <div class="glass rounded-xl p-6 mt-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold"><i class="fas fa-layer-group mr-2 text-green-400"></i>Form Yonetimi</h3>
+                        <button onclick="createDefaultFields()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium" title="Mevcut 4 form icin varsayilan alanlari otomatik olustur"><i class="fas fa-magic mr-1"></i>Varsayilan Alanlari Olustur</button>
+                    </div>
+                    <p class="text-sm text-slate-400 mb-4">Formlara kod yazmadan alan ekleyip cikarabilirsin. Bir forma tikla, alanlari gor, yeni alan ekle.</p>
+
+                    <div id="formTypesList" class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+
+                    <div id="formFieldsPanel" class="hidden rounded-lg border border-slate-700 p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h4 id="selectedFormTypeName" class="font-semibold text-lg text-blue-300"></h4>
+                            <button onclick="closeFormFieldsPanel()" class="text-slate-400 hover:text-white px-2"><i class="fas fa-times"></i> Kapat</button>
+                        </div>
+                        <div class="grid lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2">
+                                <h5 class="font-medium mb-3 text-slate-300">Mevcut Alanlar</h5>
+                                <div id="formFieldsList" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                            </div>
+                            <div class="space-y-3">
+                                <h5 class="font-medium mb-3 text-slate-300">Yeni Alan Ekle</h5>
+                                <input type="text" id="newFieldLabel" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Alan Adi (orn: Operator Adi)">
+                                <input type="text" id="newFieldKey" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Key (orn: operator_name)">
+                                <select id="newFieldType" class="input-dark w-full px-3 py-2 rounded-lg text-sm" onchange="toggleFieldOptions()">
+                                    <option value="text">Metin Kutusu</option>
+                                    <option value="number">Sayi</option>
+                                    <option value="select">Acilir Liste</option>
+                                    <option value="date">Tarih</option>
+                                    <option value="textarea">Uzun Metin</option>
+                                </select>
+                                <select id="newFieldWidth" class="input-dark w-full px-3 py-2 rounded-lg text-sm">
+                                    <option value="full">Tam Genislik</option>
+                                    <option value="half">Yari Genislik</option>
+                                </select>
+                                <input type="text" id="newFieldPlaceholder" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Placeholder (orn: Ahmet Yilmaz)">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" id="newFieldRequired" class="rounded bg-slate-700 border-slate-600"> Zorunlu alan</label>
+
+                                <div id="newFieldOptionsPanel" class="hidden space-y-2 border-t border-slate-700 pt-3 mt-2">
+                                    <p class="text-xs text-slate-400 font-medium">Liste Kaynagi</p>
+                                    <select id="newFieldOptionsSource" class="input-dark w-full px-3 py-2 rounded-lg text-sm" onchange="toggleManualOptions()">
+                                        <option value="">Manuel Secenekler</option>
+                                        <option value="locations">Lokasyonlar (otomatik)</option>
+                                        <option value="loaders">Loderler (otomatik)</option>
+                                        <option value="drilling_types">Delgi Tipleri (otomatik)</option>
+                                        <option value="categories">Kategoriler (otomatik)</option>
+                                    </select>
+                                    <div id="newFieldManualOptions" class="space-y-2">
+                                        <p class="text-xs text-slate-400">Secenekleri ekle:</p>
+                                        <div id="manualOptionsContainer" class="space-y-2">
+                                            <div class="flex gap-2">
+                                                <input type="text" class="opt-label input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Etiket (orn: Gunduz)">
+                                                <input type="text" class="opt-value input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Deger (orn: gunduz)">
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="addOptionRow()" class="text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus"></i> Secenek Ekle</button>
+                                    </div>
+                                </div>
+
+                                <button onclick="addFormField()" class="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium mt-2"><i class="fas fa-plus mr-1"></i>Forma Alan Ekle</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -232,6 +299,8 @@
         let currentAdminData = [];
         let chartType, chartLocation, chartOre, chartDaily;
         let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
+        let formTypes = [], formFields = [];
+        let selectedFormTypeId = null;
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -347,6 +416,7 @@
                 await loadCategoriesAndMaterials();
                 await loadDrillingTypes();
                 await loadLoaders();
+                await loadFormTypesAdmin();
                 const today = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
                 loadDashboardStats(); loadTodayStats(); loadDashRecentEntries();
@@ -360,9 +430,8 @@
         function showSection(section) {
             ['dashboard', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
             document.getElementById(section + 'Section').classList.remove('hidden');
-            
             if (section === 'admin') {
-                loadAdminData(); loadCategoriesList(); loadLocationsList(); loadDrillingTypesList(); loadLoadersList();
+                loadAdminData(); loadCategoriesList(); loadLocationsList(); loadDrillingTypesList(); loadLoadersList(); loadFormTypesAdmin();
                 document.getElementById('newDrillingTypeName').value = '';
                 document.getElementById('newDrillingTypeFields').innerHTML = '';
                 addFieldRow('newDrillingTypeFields');
@@ -412,7 +481,6 @@
             const endDate = document.getElementById('adminEndDate').value;
             const loc = document.getElementById('adminLoc').value.trim();
             const type = document.getElementById('adminType').value;
-            const user = document.getElementById('adminUser').value.trim().toLowerCase();
             const search = document.getElementById('adminSearch').value.trim().toLowerCase();
             let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
             if (startDate) query = query.gte('date', startDate);
@@ -422,7 +490,6 @@
             const { data, error } = await query;
             if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
             let filtered = data || [];
-            if (user) filtered = filtered.filter(e => e.profiles && e.profiles.full_name && e.profiles.full_name.toLowerCase().includes(user));
             if (search) filtered = filtered.filter(e => JSON.stringify(e.details).toLowerCase().includes(search));
             currentAdminData = filtered;
             const tbody = document.getElementById('adminTableBody');
@@ -455,7 +522,6 @@
         function clearAdminFilters() {
             document.getElementById('adminStartDate').value = '';
             document.getElementById('adminEndDate').value = '';
-            document.getElementById('adminUser').value = '';
             document.getElementById('adminLoc').value = '';
             document.getElementById('adminType').value = '';
             document.getElementById('adminSearch').value = '';
@@ -464,7 +530,7 @@
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) {  loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
+            if (!error) { loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
         }
 
         function destroyCharts() {
@@ -665,7 +731,7 @@
             const div = document.getElementById('drillingTypesList');
             if (error) { div.textContent = 'Delgi tipleri yuklenemedi: ' + error.message; return; }
             drillingTypes = types || []; div.innerHTML = '';
-            if (drillingTypes.length === 0) { div.innerHTML = '<p class="text-slate-500 text-sm">Henüz delgi tipi yok. Yukaridan ekle.</p>'; return; }
+            if (drillingTypes.length === 0) { div.innerHTML = '<p class="text-slate-500 text-sm">Henuez delgi tipi yok. Yukaridan ekle.</p>'; return; }
             drillingTypes.forEach(tip => {
                 const kart = document.createElement('div'); kart.className = 'rounded-lg border border-slate-700 p-4';
                 const ust = document.createElement('div'); ust.className = 'flex justify-between items-center mb-3';
@@ -715,7 +781,7 @@
             const div = document.getElementById('loadersList');
             if (error) { div.textContent = 'Loderler yuklenemedi: ' + error.message; return; }
             loaders = data || []; div.innerHTML = '';
-            if (loaders.length === 0) { div.innerHTML = '<p class="text-slate-500 text-sm">Henüz kepce tanimlanmamis.</p>'; return; }
+            if (loaders.length === 0) { div.innerHTML = '<p class="text-slate-500 text-sm">Henuez kepce tanimlanmamis.</p>'; return; }
             loaders.forEach(l => {
                 const satir = document.createElement('div'); satir.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
                 const ad = document.createElement('span'); ad.textContent = l.name;
@@ -745,6 +811,228 @@
             if (error) return alert('Silme hatasi: ' + error.message);
             if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('drilling_types'));
             await loadDrillingTypesList(); await loadDrillingTypes();
+        }
+
+        // ========== FORM YONETIMI ==========
+        async function loadFormTypesAdmin() {
+            const { data } = await db.from('form_types').select('*').order('sort_order');
+            formTypes = data || [];
+            const { data: fields } = await db.from('form_fields').select('*').order('sort_order');
+            formFields = fields || [];
+            const container = document.getElementById('formTypesList');
+            if (!formTypes.length) {
+                container.innerHTML = '<p class="text-slate-500 col-span-4">Henuez form tipi yok. SQL migration calistirin.</p>';
+                return;
+            }
+            container.innerHTML = formTypes.map(t => {
+                const fieldCount = formFields.filter(f => f.form_type_id === t.id && !f.parent_field_id).length;
+                return `<div class="glass rounded-lg p-4 cursor-pointer hover:border-${t.color || 'blue'}-500/50 transition border border-transparent" onclick="showFormFields('${t.id}')">
+                    <div class="flex items-center gap-3">
+                        <i class="fas ${t.icon || 'fa-circle'} text-${t.color || 'blue'}-400"></i>
+                        <div>
+                            <div class="font-medium">${t.name}</div>
+                            <div class="text-xs text-slate-400">${fieldCount} alan</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function showFormFields(formTypeId) {
+            selectedFormTypeId = formTypeId;
+            const formType = formTypes.find(t => t.id === formTypeId);
+            document.getElementById('selectedFormTypeName').textContent = (formType ? formType.name : '') + ' - Alanlar';
+            document.getElementById('formFieldsPanel').classList.remove('hidden');
+            await loadFormFieldsList(formTypeId);
+        }
+
+        function closeFormFieldsPanel() {
+            document.getElementById('formFieldsPanel').classList.add('hidden');
+            selectedFormTypeId = null;
+        }
+
+        async function loadFormFieldsList(formTypeId) {
+            const { data } = await db.from('form_fields').select('*').eq('form_type_id', formTypeId).order('sort_order');
+            const container = document.getElementById('formFieldsList');
+            if (!data || !data.length) {
+                container.innerHTML = '<p class="text-slate-500 text-sm">Henuez alan tanimlanmamis.</p>';
+                return;
+            }
+            container.innerHTML = data.map(f => {
+                let opts = '';
+                if (f.field_type === 'select') {
+                    if (f.options_source) opts = ' | Kaynak: ' + f.options_source;
+                    else if (f.options_json && f.options_json.length) opts = ' | ' + f.options_json.length + ' secenek';
+                }
+                return `<div class="flex justify-between items-center p-3 bg-slate-800 rounded-lg">
+                    <div>
+                        <span class="font-medium">${f.label}</span>
+                        <span class="text-xs text-slate-400 ml-2">(${f.key}, ${f.field_type}${f.width === 'half' ? ', yari' : ''})${opts}</span>
+                        ${f.required ? '<span class="text-xs text-red-400 ml-1">*</span>' : ''}
+                    </div>
+                    <button onclick="deleteFormField('${f.id}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash-alt"></i></button>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleFieldOptions() {
+            const type = document.getElementById('newFieldType').value;
+            const panel = document.getElementById('newFieldOptionsPanel');
+            if (type === 'select') panel.classList.remove('hidden');
+            else panel.classList.add('hidden');
+        }
+
+        function toggleManualOptions() {
+            const source = document.getElementById('newFieldOptionsSource').value;
+            const manual = document.getElementById('newFieldManualOptions');
+            if (source) manual.classList.add('hidden');
+            else manual.classList.remove('hidden');
+        }
+
+        function addOptionRow() {
+            const container = document.getElementById('manualOptionsContainer');
+            const div = document.createElement('div');
+            div.className = 'flex gap-2';
+            div.innerHTML = '<input type="text" class="opt-label input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Etiket (orn: Gunduz)"><input type="text" class="opt-value input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Deger (orn: gunduz)">';
+            container.appendChild(div);
+        }
+
+        async function addFormField() {
+            const formTypeId = selectedFormTypeId;
+            if (!formTypeId) return alert('Once bir form tipi secin');
+            const label = document.getElementById('newFieldLabel').value.trim();
+            const key = document.getElementById('newFieldKey').value.trim();
+            const type = document.getElementById('newFieldType').value;
+            const width = document.getElementById('newFieldWidth').value;
+            const placeholder = document.getElementById('newFieldPlaceholder').value.trim();
+            const required = document.getElementById('newFieldRequired').checked;
+            if (!label || !key) return alert('Alan adi ve key gerekli');
+
+            let optionsJson = [];
+            let optionsSource = null;
+            if (type === 'select') {
+                optionsSource = document.getElementById('newFieldOptionsSource').value;
+                if (!optionsSource) {
+                    document.querySelectorAll('#manualOptionsContainer .opt-label').forEach((el, i) => {
+                        const valEl = document.querySelectorAll('#manualOptionsContainer .opt-value')[i];
+                        if (el.value && valEl && valEl.value) optionsJson.push({ label: el.value, value: valEl.value });
+                    });
+                }
+            }
+
+            const { error } = await db.from('form_fields').insert([{
+                form_type_id: formTypeId,
+                label, key, field_type: type, placeholder, required, width,
+                options_json: optionsJson.length ? optionsJson : null,
+                options_source: optionsSource || null,
+                sort_order: 999
+            }]);
+            if (error) alert('Hata: ' + error.message);
+            else {
+                document.getElementById('newFieldLabel').value = '';
+                document.getElementById('newFieldKey').value = '';
+                document.getElementById('newFieldPlaceholder').value = '';
+                document.getElementById('newFieldRequired').checked = false;
+                document.getElementById('newFieldType').value = 'text';
+                document.getElementById('newFieldOptionsPanel').classList.add('hidden');
+                document.getElementById('manualOptionsContainer').innerHTML = '<div class="flex gap-2"><input type="text" class="opt-label input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Etiket (orn: Gunduz)"><input type="text" class="opt-value input-dark flex-1 px-2 py-1 rounded-lg text-sm" placeholder="Deger (orn: gunduz)"></div>';
+                await loadFormFieldsList(formTypeId);
+                await loadFormTypesAdmin();
+            }
+        }
+
+        async function deleteFormField(id) {
+            if (!confirm('Alani sil? Bu alan formdan kaldirilacak.')) return;
+            const { error } = await db.from('form_fields').delete().eq('id', id);
+            if (error) alert('Hata: ' + error.message);
+            else { await loadFormFieldsList(selectedFormTypeId); await loadFormTypesAdmin(); }
+        }
+
+        async function createDefaultFields() {
+            if (!confirm('Mevcut 4 form (Sondaj, Malzeme, Cevher/Pasa, Loder) icin varsayilan alanlari olustur? Mevcut alanlar degismez, eksikler eklenir.')) return;
+
+            const defaults = [
+                // Drilling
+                { ft: '11111111-1111-1111-1111-111111111111', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { ft: '11111111-1111-1111-1111-111111111111', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { ft: '11111111-1111-1111-1111-111111111111', label: 'Delgi Tipi', key: 'drilling_type', type: 'select', req: true, w: 'full', so: 3, src: 'drilling_types' },
+                // Material
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Malzeme Kalemleri', key: 'material_items', type: 'text', req: true, w: 'full', so: 3, rep: true },
+                // Material children
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Kategori', key: 'category_id', type: 'select', req: true, w: 'full', so: 4, src: 'categories', par: 'material_items' },
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Malzeme', key: 'material_id', type: 'select', req: true, w: 'full', so: 5, src: 'materials', par: 'material_items' },
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Miktar', key: 'quantity', type: 'number', req: true, w: 'full', so: 6, par: 'material_items' },
+                { ft: '22222222-2222-2222-2222-222222222222', label: 'Birim', key: 'unit', type: 'select', req: true, w: 'full', so: 7, par: 'material_items', opts: [{label:'Adet',value:'adet'},{label:'Kg',value:'kg'},{label:'Lt',value:'lt'},{label:'Mt',value:'mt'}] },
+                // Ore
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Lokasyon', key: 'location', type: 'select', req: true, w: 'half', so: 2, src: 'locations' },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Cevher Iceri', key: 'cevher_iceri', type: 'number', req: false, w: 'half', so: 3 },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Cevher Disari', key: 'cevher_disari', type: 'number', req: false, w: 'half', so: 4 },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Pasa Iceri', key: 'pasa_iceri', type: 'number', req: false, w: 'half', so: 5 },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Pasa Disari', key: 'pasa_disari', type: 'number', req: false, w: 'half', so: 6 },
+                { ft: '33333333-3333-3333-3333-333333333333', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
+                // Loder
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Tarih', key: 'date', type: 'date', req: true, w: 'half', so: 1 },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Kepce No', key: 'loader', type: 'select', req: true, w: 'half', so: 2, src: 'loaders' },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Calisma Alani', key: 'location', type: 'select', req: true, w: 'half', so: 3, src: 'locations' },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Calisma Saati', key: 'hours', type: 'number', req: true, w: 'half', so: 4, ph: '7.5' },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Cevher Kova', key: 'cevher_kovasi', type: 'number', req: false, w: 'half', so: 5, ph: '0' },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Pasa Kova', key: 'pasa_kovasi', type: 'number', req: false, w: 'half', so: 6, ph: '0' },
+                { ft: '44444444-4444-4444-4444-444444444444', label: 'Vardiya', key: 'shift', type: 'select', req: false, w: 'full', so: 7, opts: [{label:'Gunduz',value:'gunduz'},{label:'Gece',value:'gece'}] },
+            ];
+
+            // Once mevcut alanlari cek, var olanlari atla
+            const { data: existing } = await db.from('form_fields').select('key,form_type_id');
+            const existingKeys = new Set((existing || []).map(e => e.form_type_id + ':' + e.key));
+
+            const toInsert = [];
+            const parentMap = {}; // key -> id mapping for parent fields
+
+            for (const d of defaults) {
+                const uniqueKey = d.ft + ':' + d.key;
+                if (existingKeys.has(uniqueKey)) continue;
+
+                const row = {
+                    form_type_id: d.ft,
+                    label: d.label,
+                    key: d.key,
+                    field_type: d.type,
+                    placeholder: d.ph || '',
+                    required: d.req,
+                    width: d.w,
+                    sort_order: d.so,
+                    is_repeating: d.rep || false,
+                    options_source: d.src || null,
+                    options_json: d.opts || null
+                };
+                toInsert.push(row);
+            }
+
+            if (toInsert.length === 0) { alert('Tum varsayilan alanlar zaten mevcut!'); return; }
+
+            // Insert parent fields first, then update children with parent_field_id
+            // But we need to handle parent-child relationship. For simplicity, insert all then update.
+            const { error } = await db.from('form_fields').insert(toInsert);
+            if (error) { alert('Hata: ' + error.message); return; }
+
+            // Now update parent_field_id for material children
+            const { data: allFields } = await db.from('form_fields').select('*');
+            const materialItems = allFields.find(f => f.key === 'material_items' && f.form_type_id === '22222222-2222-2222-2222-222222222222');
+            if (materialItems) {
+                const children = allFields.filter(f => 
+                    f.form_type_id === '22222222-2222-2222-2222-222222222222' && 
+                    ['category_id','material_id','quantity','unit'].includes(f.key)
+                );
+                for (const child of children) {
+                    await db.from('form_fields').update({ parent_field_id: materialItems.id }).eq('id', child.id);
+                }
+            }
+
+            alert(toInsert.length + ' varsayilan alan olusturuldu!');
+            await loadFormTypesAdmin();
+            if (selectedFormTypeId) await loadFormFieldsList(selectedFormTypeId);
         }
 
         initApp();
