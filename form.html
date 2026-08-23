@@ -21,173 +21,40 @@
         .slide-in { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         select, input { touch-action: manipulation; }
+        .repeating-row { background: rgba(30,41,59,0.5); border: 1px solid rgba(255,255,255,0.05); }
     </style>
+<base target="_blank">
 <base target="_blank">
 </head>
 <body class="min-h-screen">
-    <!-- Navbar -->
     <nav class="glass sticky top-0 z-50 border-b border-slate-700/50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <i class="fas fa-hard-hat text-blue-500 text-xl"></i>
                 <span class="font-bold text-base sm:text-lg">Madenci Veri Girisi</span>
             </div>
-            <a href="./Admin.html" class="text-sm text-slate-400 hover:text-white transition flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-800">
+            <a href="./admin.html" class="text-sm text-slate-400 hover:text-white transition flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-800">
                 <i class="fas fa-shield-alt text-yellow-500"></i>
                 <span class="hidden sm:inline">Admin</span>
             </a>
         </div>
     </nav>
 
-    <!-- Honeypot -->
     <div class="honeypot"><input type="text" id="website_url" tabindex="-1" autocomplete="off"></div>
 
-    <!-- SELECTION SCREEN -->
     <div id="selectionScreen" class="max-w-2xl mx-auto px-4 py-6 fade-in">
         <div class="text-center mb-6">
             <h2 class="text-xl sm:text-2xl font-bold mb-2">Hangi raporu girmek istiyorsunuz?</h2>
             <p class="text-slate-400 text-sm">Asagidaki seceneklerden birini secin</p>
         </div>
-        <div class="grid grid-cols-2 gap-3 sm:gap-4">
-            <button onclick="openForm('drilling')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-green-500/50 hover:bg-slate-800/60">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-green-500/10 flex items-center justify-center">
-                    <i class="fas fa-bullseye text-2xl text-green-400"></i>
-                </div>
-                <div class="font-semibold text-sm sm:text-base">Sondaj / Delme</div>
-                <div class="text-xs text-slate-500 mt-1">Delme raporu girisi</div>
-            </button>
-            <button onclick="openForm('material')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-blue-500/50 hover:bg-slate-800/60">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                    <i class="fas fa-boxes text-2xl text-blue-400"></i>
-                </div>
-                <div class="font-semibold text-sm sm:text-base">Malzeme Kullanımı</div>
-                <div class="text-xs text-slate-500 mt-1">Malzeme takibi</div>
-            </button>
-            <button onclick="openForm('ore')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-orange-500/50 hover:bg-slate-800/60">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                    <i class="fas fa-dolly text-2xl text-orange-400"></i>
-                </div>
-                <div class="font-semibold text-sm sm:text-base">Cevher / Pasa</div>
-                <div class="text-xs text-slate-500 mt-1">Lokomotif hareketleri</div>
-            </button>
-            <button onclick="openForm('loder')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-purple-500/50 hover:bg-slate-800/60">
-                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                    <i class="fas fa-truck-pickup text-2xl text-purple-400"></i>
-                </div>
-                <div class="font-semibold text-sm sm:text-base">Loder Calısması</div>
-                <div class="text-xs text-slate-500 mt-1">Kepce operasyonu</div>
-            </button>
-        </div>
+        <div id="formTypeCards" class="grid grid-cols-2 gap-3 sm:gap-4"></div>
     </div>
 
-    <!-- FORM SCREENS -->
     <div id="formScreens" class="hidden max-w-2xl mx-auto px-4 py-4 slide-in">
-        <!-- Back button -->
         <button onclick="showSelection()" class="mb-4 flex items-center gap-2 text-slate-400 hover:text-white transition text-sm">
             <i class="fas fa-arrow-left"></i> Geri don
         </button>
-
-        <!-- Drilling Form -->
-        <div id="form-drilling" class="hidden">
-            <div class="glass rounded-2xl p-5 sm:p-6">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center"><i class="fas fa-bullseye text-green-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Sondaj Raporu</h3><p class="text-xs text-slate-400">Delme operasyonu detayları</p></div>
-                </div>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="d_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="d_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
-                    <div><label class="block text-xs text-slate-400 mb-1.5">Delgi Tipi</label><select id="d_type" class="input-dark w-full px-3 py-2.5 rounded-xl" onchange="renderDrillingFields()"><option value="">Sec</option></select></div>
-                    <div id="d_dynamicFields" class="grid grid-cols-2 gap-3"></div>
-                    <div id="d_typeHint" class="text-xs text-slate-500">Delgi tipini secince o tipe ait alanlar acılır.</div>
-                </div>
-                <button onclick="submitEntry('drilling')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
-            </div>
-        </div>
-
-        <!-- Material Form -->
-        <div id="form-material" class="hidden">
-            <div class="glass rounded-2xl p-5 sm:p-6">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center"><i class="fas fa-boxes text-blue-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Malzeme Kullanımı</h3><p class="text-xs text-slate-400">Malzeme takip girisi</p></div>
-                </div>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="m_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="m_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-300 mb-2">Malzeme Kalemleri</label>
-                        <div id="materialRows" class="space-y-2"></div>
-                        <button type="button" onclick="addMaterialRow()" class="mt-3 w-full py-3 rounded-xl border-2 border-dashed border-slate-600 hover:border-blue-500 text-slate-400 hover:text-blue-400 transition flex items-center justify-center gap-2 text-sm">
-                            <i class="fas fa-plus-circle"></i><span>Malzeme Ekle</span>
-                        </button>
-                    </div>
-                </div>
-                <button onclick="submitEntry('material')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
-            </div>
-        </div>
-
-        <!-- Ore Form -->
-        <div id="form-ore" class="hidden">
-            <div class="glass rounded-2xl p-5 sm:p-6">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center"><i class="fas fa-dolly text-orange-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Cevher / Pasa</h3><p class="text-xs text-slate-400">Lokomotif hareket girisi</p></div>
-                </div>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="o_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="o_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
-                    <div class="rounded-xl border border-slate-700/50 border-l-4 border-l-orange-500 p-4 bg-slate-800/30">
-                        <div class="text-xs font-medium text-orange-400 mb-2">Cevher</div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" id="o_cevher_iceri" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div>
-                            <div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" id="o_cevher_disari" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div>
-                        </div>
-                    </div>
-                    <div class="rounded-xl border border-slate-700/50 border-l-4 border-l-slate-500 p-4 bg-slate-800/30">
-                        <div class="text-xs font-medium text-slate-300 mb-2">Pasa</div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" id="o_pasa_iceri" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div>
-                            <div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" id="o_pasa_disari" class="input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div>
-                        </div>
-                    </div>
-                    <div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select id="o_shift" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>
-                </div>
-                <button onclick="submitEntry('ore')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
-            </div>
-        </div>
-
-        <!-- Loder Form -->
-        <div id="form-loder" class="hidden">
-            <div class="glass rounded-2xl p-5 sm:p-6">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center"><i class="fas fa-truck-pickup text-purple-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Loder Calısması</h3><p class="text-xs text-slate-400">Kepce operasyon girisi</p></div>
-                </div>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="ld_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Kepce No</label><select id="ld_loader" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Calısma Alanı</label><select id="ld_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Calısma Saati</label><input type="number" step="0.5" id="ld_hours" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="7.5"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Cevher Kova</label><input type="number" id="ld_cevher_kovasi" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Pasa Kova</label><input type="number" id="ld_pasa_kovasi" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div>
-                    </div>
-                    <div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select id="ld_shift" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>
-                </div>
-                <button onclick="submitEntry('loder')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
-            </div>
-        </div>
+        <div id="dynamicFormContainer"></div>
     </div>
 
     <script>
@@ -195,11 +62,14 @@
         const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
         const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        let formTypes = [];
+        let formFields = [];
         let categories = [];
         let materialsByCategory = {};
         let locations = [];
         let drillingTypes = [];
         let loaders = [];
+        let currentFormTypeId = null;
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -210,25 +80,20 @@
         };
 
         async function initApp() {
+            await loadFormTypes();
             await loadCategoriesAndMaterials();
             await loadDrillingTypes();
             await loadLoaders();
+            renderFormTypeCards();
             const today = new Date().toISOString().split('T')[0];
             document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
         }
 
-        function showSelection() {
-            document.getElementById('selectionScreen').classList.remove('hidden');
-            document.getElementById('formScreens').classList.add('hidden');
-            ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
-        }
-
-        function openForm(type) {
-            document.getElementById('selectionScreen').classList.add('hidden');
-            document.getElementById('formScreens').classList.remove('hidden');
-            ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
-            document.getElementById('form-' + type).classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+        async function loadFormTypes() {
+            const { data } = await db.from('form_types').select('*').order('sort_order');
+            formTypes = data || [];
+            const { data: fields } = await db.from('form_fields').select('*').order('sort_order');
+            formFields = fields || [];
         }
 
         async function loadCategoriesAndMaterials() {
@@ -240,146 +105,337 @@
                 mats.forEach(mat => { if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = []; materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name }); });
             }
             const { data: locs } = await db.from('locations').select('*').order('name');
-            if (locs) {
-                locations = locs;
-                ['d_location','m_location','o_location','ld_location'].forEach(id => {
-                    const sel = document.getElementById(id);
-                    if (sel) { sel.innerHTML = '<option value="">Sec</option>'; locs.forEach(l => { const o = document.createElement('option'); o.value = l.name; o.textContent = l.name; sel.appendChild(o); }); }
-                });
-            }
+            if (locs) locations = locs;
         }
 
         async function loadLoaders() {
             const { data } = await db.from('loaders').select('*').order('name');
             loaders = data || [];
-            const sel = document.getElementById('ld_loader');
-            sel.innerHTML = '<option value="">Sec</option>';
-            loaders.forEach(l => { const o = document.createElement('option'); o.value = l.id; o.textContent = l.name; sel.appendChild(o); });
         }
 
         async function loadDrillingTypes() {
             const { data: types } = await db.from('drilling_types').select('*').order('name');
             drillingTypes = types || [];
-            const sel = document.getElementById('d_type');
-            sel.innerHTML = '<option value="">Sec</option>';
-            drillingTypes.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; sel.appendChild(o); });
-            renderDrillingFields();
         }
 
-        function renderDrillingFields() {
-            const kapsayici = document.getElementById('d_dynamicFields');
-            const ipucu = document.getElementById('d_typeHint');
-            const onceki = {};
-            kapsayici.querySelectorAll('[data-alan]').forEach(el => { if (el.value) onceki[el.dataset.alan] = el.value; });
-            kapsayici.innerHTML = '';
-            const tip = drillingTypes.find(t => t.id === document.getElementById('d_type').value);
-            if (!tip) {
-                ipucu.textContent = drillingTypes.length === 0 ? 'Henüz delgi tipi tanımlanmamıs.' : 'Delgi tipini secince o tipe ait alanlar acılır.';
-                ipucu.classList.remove('hidden');
+        function showSelection() {
+            document.getElementById('selectionScreen').classList.remove('hidden');
+            document.getElementById('formScreens').classList.add('hidden');
+            document.getElementById('dynamicFormContainer').innerHTML = '';
+            currentFormTypeId = null;
+        }
+
+        function renderFormTypeCards() {
+            const container = document.getElementById('formTypeCards');
+            if (!formTypes.length) {
+                container.innerHTML = '<p class="text-slate-500 text-center col-span-2 py-8">Henüz form tanimlanmamis. Admin panelinden ekleyin.</p>';
                 return;
             }
+            const colorMap = {
+                green: 'green', blue: 'blue', orange: 'orange', purple: 'purple',
+                red: 'red', yellow: 'yellow', pink: 'pink', indigo: 'indigo'
+            };
+            container.innerHTML = formTypes.map(t => {
+                const c = colorMap[t.color] || 'blue';
+                return `<button onclick="openForm('${t.id}')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-${c}-500/50 hover:bg-slate-800/60">
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-${c}-500/10 flex items-center justify-center">
+                        <i class="fas ${t.icon} text-2xl text-${c}-400"></i>
+                    </div>
+                    <div class="font-semibold text-sm sm:text-base">${t.name}</div>
+                    <div class="text-xs text-slate-500 mt-1">${t.description || ''}</div>
+                </button>`;
+            }).join('');
+        }
+
+        function openForm(formTypeId) {
+            currentFormTypeId = formTypeId;
+            document.getElementById('selectionScreen').classList.add('hidden');
+            document.getElementById('formScreens').classList.remove('hidden');
+            renderDynamicForm(formTypeId);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderDynamicForm(formTypeId) {
+            const formType = formTypes.find(t => t.id === formTypeId);
+            if (!formType) return;
+            const fields = formFields.filter(f => f.form_type_id === formTypeId && !f.parent_field_id).sort((a,b) => a.sort_order - b.sort_order);
+            const container = document.getElementById('dynamicFormContainer');
+            const c = formType.color || 'blue';
+
+            let html = `<div class="glass rounded-2xl p-5 sm:p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-lg bg-${c}-500/10 flex items-center justify-center"><i class="fas ${formType.icon} text-${c}-400"></i></div>
+                    <div><h3 class="font-bold text-lg">${formType.name}</h3><p class="text-xs text-slate-400">${formType.description || ''}</p></div>
+                </div>
+                <div id="formFieldsContainer" class="space-y-4">`;
+
+            fields.forEach(field => {
+                html += renderFieldHTML(field, formType);
+            });
+
+            html += `</div>
+                <button onclick="submitEntry('${formTypeId}')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition">
+                    <i class="fas fa-save mr-2"></i>Kaydet
+                </button>
+            </div>`;
+
+            container.innerHTML = html;
+            setupFieldBehaviors(formTypeId);
+        }
+
+        function renderFieldHTML(field, formType) {
+            const widthClass = field.width === 'half' ? 'w-full sm:w-1/2' : 'w-full';
+            const requiredAttr = field.required ? 'required' : '';
+            const reqText = field.required ? ' *' : '';
+
+            if (field.is_repeating) {
+                const children = formFields.filter(f => f.parent_field_id === field.id).sort((a,b) => a.sort_order - b.sort_order);
+                let childrenHTML = '';
+                children.forEach(child => {
+                    childrenHTML += renderChildFieldHTML(child);
+                });
+                return `<div class="repeating-group" data-field-id="${field.id}">
+                    <label class="block text-xs font-medium text-slate-300 mb-2">${field.label}</label>
+                    <div class="repeating-rows space-y-2"></div>
+                    <button type="button" onclick="addRepeatingRow('${field.id}')" class="mt-3 w-full py-3 rounded-xl border-2 border-dashed border-slate-600 hover:border-${formType.color}-500 text-slate-400 hover:text-${formType.color}-400 transition flex items-center justify-center gap-2 text-sm">
+                        <i class="fas fa-plus-circle"></i><span>${field.label} Ekle</span>
+                    </button>
+                    <template id="template-${field.id}">
+                        <div class="repeating-row grid grid-cols-12 gap-2 items-center p-2 rounded-lg">${childrenHTML}
+                            <button type="button" onclick="this.closest('.repeating-row').remove()" class="col-span-1 text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>
+                        </div>
+                    </template>
+                </div>`;
+            }
+
+            let inputHTML = '';
+            const fid = `field_${field.key}`;
+            if (field.field_type === 'select') {
+                inputHTML = `<select id="${fid}" class="input-dark w-full px-3 py-2.5 rounded-xl" ${requiredAttr} data-field-key="${field.key}" data-options-source="${field.options_source || ''}">${renderSelectOptions(field)}</select>`;
+            } else if (field.field_type === 'textarea') {
+                inputHTML = `<textarea id="${fid}" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="${field.placeholder || ''}" ${requiredAttr} data-field-key="${field.key}"></textarea>`;
+            } else if (field.field_type === 'hidden') {
+                inputHTML = `<input type="hidden" id="${fid}" data-field-key="${field.key}">`;
+                return inputHTML;
+            } else {
+                inputHTML = `<input type="${field.field_type}" id="${fid}" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="${field.placeholder || ''}" ${requiredAttr} data-field-key="${field.key}">`;
+            }
+
+            return `<div class="${widthClass}"><label class="block text-xs text-slate-400 mb-1.5">${field.label}${reqText}</label>${inputHTML}</div>`;
+        }
+
+        function renderChildFieldHTML(field) {
+            const requiredAttr = field.required ? 'required' : '';
+            let inputHTML = '';
+            if (field.field_type === 'select') {
+                inputHTML = `<select class="input-dark col-span-3 px-2 py-2 rounded-lg text-sm" ${requiredAttr} data-field-key="${field.key}" data-options-source="${field.options_source || ''}">${renderSelectOptions(field)}</select>`;
+            } else if (field.field_type === 'textarea') {
+                inputHTML = `<textarea class="input-dark col-span-3 px-2 py-2 rounded-lg text-sm" placeholder="${field.placeholder || ''}" ${requiredAttr} data-field-key="${field.key}"></textarea>`;
+            } else {
+                inputHTML = `<input type="${field.field_type}" class="input-dark col-span-3 px-2 py-2 rounded-lg text-sm" placeholder="${field.placeholder || ''}" ${requiredAttr} data-field-key="${field.key}">`;
+            }
+            return inputHTML;
+        }
+
+        function renderSelectOptions(field) {
+            let options = '<option value="">Sec</option>';
+            if (field.options_source === 'locations') {
+                locations.forEach(l => options += `<option value="${l.name}">${l.name}</option>`);
+            } else if (field.options_source === 'loaders') {
+                loaders.forEach(l => options += `<option value="${l.id}">${l.name}</option>`);
+            } else if (field.options_source === 'drilling_types') {
+                drillingTypes.forEach(t => options += `<option value="${t.id}">${t.name}</option>`);
+            } else if (field.options_source === 'categories') {
+                categories.forEach(c => options += `<option value="${c.id}">${c.name}</option>`);
+            } else if (field.options_json && Array.isArray(field.options_json) && field.options_json.length) {
+                field.options_json.forEach(o => options += `<option value="${o.value}">${o.label}</option>`);
+            }
+            return options;
+        }
+
+        function setupFieldBehaviors(formTypeId) {
+            const formType = formTypes.find(t => t.id === formTypeId);
+            if (!formType) return;
+
+            if (formType.slug === 'material') {
+                document.getElementById('formFieldsContainer').addEventListener('change', function(e) {
+                    if (e.target.dataset.fieldKey === 'category_id') {
+                        const row = e.target.closest('.repeating-row');
+                        if (row) {
+                            const matSel = row.querySelector('[data-field-key="material_id"]');
+                            if (matSel) {
+                                matSel.innerHTML = '<option value="">Malzeme</option>';
+                                const cid = e.target.value;
+                                if (cid && materialsByCategory[cid]) {
+                                    materialsByCategory[cid].forEach(m => {
+                                        const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; matSel.appendChild(o);
+                                    });
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (formType.slug === 'drilling') {
+                const typeSelect = document.querySelector('[data-field-key="drilling_type"]');
+                if (typeSelect) {
+                    typeSelect.addEventListener('change', function() {
+                        renderDrillingDynamicFields(this.value);
+                    });
+                }
+            }
+        }
+
+        function renderDrillingDynamicFields(drillingTypeId) {
+            const container = document.getElementById('drillingDynamicFields');
+            if (!container) {
+                const formFieldsContainer = document.getElementById('formFieldsContainer');
+                const div = document.createElement('div');
+                div.id = 'drillingDynamicFields';
+                div.className = 'grid grid-cols-2 gap-3';
+                formFieldsContainer.appendChild(div);
+            }
+            const target = document.getElementById('drillingDynamicFields');
+            target.innerHTML = '';
+            const tip = drillingTypes.find(t => t.id === drillingTypeId);
+            if (!tip) return;
             let alanlar = [];
             if (Array.isArray(tip.fields)) {
                 if (tip.fields.length > 0 && typeof tip.fields[0] === 'string') {
                     alanlar = tip.fields.map(key => { const l = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text', placeholder: '' }; return { key, label: l.label, type: l.type, placeholder: l.placeholder || '' }; });
                 } else { alanlar = tip.fields; }
             }
-            if (alanlar.length === 0) { ipucu.textContent = '"' + tip.name + '" tipine hic alan atanmamıs.'; ipucu.classList.remove('hidden'); return; }
-            ipucu.classList.add('hidden');
+            if (alanlar.length === 0) return;
             alanlar.forEach(alan => {
                 const sarmal = document.createElement('div');
-                sarmal.innerHTML = '<label class="block text-xs text-slate-400 mb-1">' + alan.label + '</label><input type="' + (alan.type || 'text') + '" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="' + (alan.placeholder || '') + '" data-alan="' + alan.key + '" value="' + (onceki[alan.key] || '') + '">';
-                kapsayici.appendChild(sarmal);
+                sarmal.innerHTML = `<label class="block text-xs text-slate-400 mb-1">${alan.label}</label><input type="${alan.type || 'text'}" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="${alan.placeholder || ''}" data-alan="${alan.key}">`;
+                target.appendChild(sarmal);
             });
         }
 
-        function addMaterialRow(data) {
-            const row = document.createElement('div');
-            row.className = 'material-row grid grid-cols-12 gap-2 items-center';
-            row.innerHTML = '<select class="m-cat input-dark col-span-4 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select>' +
-                '<select class="m-name input-dark col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select>' +
-                '<input type="number" class="m-qty input-dark col-span-3 px-2 py-2 rounded-lg text-sm" placeholder="Miktar">' +
-                '<select class="m-unit input-dark col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Ad</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option></select>' +
-                '<button type="button" class="col-span-1 text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
-            const catSel = row.querySelector('.m-cat');
-            categories.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; catSel.appendChild(o); });
-            catSel.addEventListener('change', function() {
-                const matSel = row.querySelector('.m-name');
-                matSel.innerHTML = '<option value="">Malzeme</option>';
-                const cid = this.value;
-                if (cid && materialsByCategory[cid]) materialsByCategory[cid].forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; matSel.appendChild(o); });
-            });
-            row.querySelector('button').addEventListener('click', () => row.remove());
-            if (data) {
-                catSel.value = data.category_id || '';
-                if (data.category_id) { catSel.dispatchEvent(new Event('change')); row.querySelector('.m-name').value = data.material_id || ''; }
-                row.querySelector('.m-qty').value = data.quantity || '';
-                row.querySelector('.m-unit').value = data.unit || 'adet';
+        function addRepeatingRow(groupId) {
+            const template = document.getElementById(`template-${groupId}`);
+            const container = document.querySelector(`.repeating-group[data-field-id="${groupId}"] .repeating-rows`);
+            if (template && container) {
+                const clone = template.content.cloneNode(true);
+                container.appendChild(clone);
             }
-            document.getElementById('materialRows').appendChild(row);
         }
 
-        async function submitEntry(type) {
+        async function submitEntry(formTypeId) {
             const hp = document.getElementById('website_url');
             if (hp && hp.value.trim() !== '') { alert('Bot tespit edildi.'); return; }
 
+            const formType = formTypes.find(t => t.id === formTypeId);
+            if (!formType) return;
+
+            const baseFields = formFields.filter(f => f.form_type_id === formTypeId && !f.is_repeating && !f.parent_field_id);
             let data = { date: '', location: '', details: {} };
 
-            if (type === 'drilling') {
-                const tip = drillingTypes.find(t => t.id === document.getElementById('d_type').value);
-                if (!tip) { alert('Delgi tipi secin.'); return; }
-                data.date = document.getElementById('d_date').value;
-                data.location = document.getElementById('d_location').value;
-                data.details = { drilling_type_id: tip.id, drilling_type: tip.name };
-                document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => { if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value; });
-            } else if (type === 'material') {
-                data.date = document.getElementById('m_date').value;
-                data.location = document.getElementById('m_location').value;
-                const rows = document.querySelectorAll('#materialRows .material-row');
-                const payload = [];
-                for (const row of rows) {
-                    const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), qty = row.querySelector('.m-qty'), unit = row.querySelector('.m-unit');
-                    if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
-                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
-                }
-                if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
-                const { error } = await db.from('entries').insert(payload);
-                if (error) alert('Hata: ' + error.message);
-                else { document.getElementById('materialRows').innerHTML = ''; alert(payload.length + ' malzeme kaydı eklendi!'); }
-                return;
-            } else if (type === 'ore') {
-                data.date = document.getElementById('o_date').value;
-                data.location = document.getElementById('o_location').value;
-                const shift = document.getElementById('o_shift').value;
-                const rows = [];
-                const ci = document.getElementById('o_cevher_iceri').value.trim(), cd = document.getElementById('o_cevher_disari').value.trim();
-                const pi = document.getElementById('o_pasa_iceri').value.trim(), pd = document.getElementById('o_pasa_disari').value.trim();
-                if (ci) rows.push({ type: 'cevher', quantity: ci, direction: 'iceri', shift });
-                if (cd) rows.push({ type: 'cevher', quantity: cd, direction: 'disari', shift });
-                if (pi) rows.push({ type: 'pasa', quantity: pi, direction: 'iceri', shift });
-                if (pd) rows.push({ type: 'pasa', quantity: pd, direction: 'disari', shift });
-                if (rows.length === 0) { alert('En az bir miktar girin.'); return; }
-                const { error } = await db.from('entries').insert(rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: d })));
-                if (error) alert('Hata: ' + error.message);
-                else { ['o_cevher_iceri','o_cevher_disari','o_pasa_iceri','o_pasa_disari'].forEach(id => document.getElementById(id).value = ''); alert(rows.length + ' hareket kaydedildi!'); }
-                return;
-            } else if (type === 'loder') {
-                const loder = loaders.find(l => l.id === document.getElementById('ld_loader').value);
-                if (!loder) { alert('Kepce no secin.'); return; }
-                const saat = document.getElementById('ld_hours').value.trim();
-                if (saat === '') { alert('Calısma saati girin.'); return; }
-                data.date = document.getElementById('ld_date').value;
-                data.location = document.getElementById('ld_location').value;
-                data.details = { loader_id: loder.id, loader: loder.name, hours: saat, cevher_kovasi: document.getElementById('ld_cevher_kovasi').value.trim() || '0', pasa_kovasi: document.getElementById('ld_pasa_kovasi').value.trim() || '0', shift: document.getElementById('ld_shift').value };
-            }
+            baseFields.forEach(field => {
+                const el = document.getElementById(`field_${field.key}`);
+                if (!el) return;
+                if (field.key === 'date') data.date = el.value;
+                else if (field.key === 'location') data.location = el.value;
+                else data.details[field.key] = el.value;
+            });
 
             if (!data.date || !data.location) { alert('Tarih ve lokasyon zorunlu!'); return; }
-            const { error } = await db.from('entries').insert([{ date: data.date, entry_type: type, location: data.location, details: data.details }]);
-            if (error) alert('Hata: ' + error.message);
-            else {
-                document.querySelectorAll('.input-dark').forEach(el => { if (el.type !== 'date' && el.tagName !== 'SELECT') el.value = ''; });
-                alert('Kaydedildi!');
+
+            if (formType.slug === 'material') {
+                await submitMaterial(data, formTypeId);
+            } else if (formType.slug === 'ore') {
+                await submitOre(data, formTypeId);
+            } else if (formType.slug === 'drilling') {
+                await submitDrilling(data, formTypeId);
+            } else if (formType.slug === 'loder') {
+                await submitLoder(data, formTypeId);
+            } else {
+                const { error } = await db.from('entries').insert([{ date: data.date, entry_type: formType.slug, location: data.location, details: data.details }]);
+                if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
             }
+        }
+
+        async function submitDrilling(data, formTypeId) {
+            const tip = drillingTypes.find(t => t.id === data.details.drilling_type);
+            if (!tip) { alert('Delgi tipi secin.'); return; }
+            data.details.drilling_type_id = tip.id;
+            data.details.drilling_type = tip.name;
+            const container = document.getElementById('drillingDynamicFields');
+            if (container) {
+                container.querySelectorAll('[data-alan]').forEach(el => {
+                    if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value;
+                });
+            }
+            const { error } = await db.from('entries').insert([{ date: data.date, entry_type: 'drilling', location: data.location, details: data.details }]);
+            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
+        }
+
+        async function submitMaterial(data, formTypeId) {
+            const groupField = formFields.find(f => f.form_type_id === formTypeId && f.is_repeating);
+            if (!groupField) return;
+            const rows = document.querySelectorAll(`.repeating-group[data-field-id="${groupField.id}"] .repeating-row`);
+            const children = formFields.filter(f => f.parent_field_id === groupField.id);
+            const payload = [];
+            rows.forEach(row => {
+                const rowData = { date: data.date, entry_type: 'material', location: data.location, details: {} };
+                let hasData = false;
+                children.forEach(child => {
+                    const el = row.querySelector(`[data-field-key="${child.key}"]`);
+                    if (!el) return;
+                    if (child.key === 'category_id') {
+                        rowData.details.category = el.options[el.selectedIndex]?.text || '';
+                        rowData.details.category_id = el.value;
+                    } else if (child.key === 'material_id') {
+                        rowData.details.name = el.options[el.selectedIndex]?.text || '';
+                        rowData.details.material_id = el.value;
+                    } else if (child.key === 'quantity') {
+                        rowData.details.quantity = el.value;
+                    } else if (child.key === 'unit') {
+                        rowData.details.unit = el.value;
+                    }
+                    if (el.value) hasData = true;
+                });
+                if (hasData && rowData.details.material_id) payload.push(rowData);
+            });
+            if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
+            const { error } = await db.from('entries').insert(payload);
+            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert(payload.length + ' malzeme kaydi eklendi!'); }
+        }
+
+        async function submitOre(data, formTypeId) {
+            const rows = [];
+            const fields = formFields.filter(f => f.form_type_id === formTypeId && !f.is_repeating);
+            fields.forEach(field => {
+                if (['cevher_iceri','cevher_disari','pasa_iceri','pasa_disari'].includes(field.key)) {
+                    const el = document.getElementById(`field_${field.key}`);
+                    if (el && el.value.trim()) {
+                        const [type, direction] = field.key.split('_');
+                        rows.push({ type, quantity: el.value, direction, shift: data.details.shift || '' });
+                    }
+                }
+            });
+            if (rows.length === 0) { alert('En az bir miktar girin.'); return; }
+            const { error } = await db.from('entries').insert(rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: d })));
+            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert(rows.length + ' hareket kaydedildi!'); }
+        }
+
+        async function submitLoder(data, formTypeId) {
+            const loder = loaders.find(l => l.id === data.details.loader);
+            if (!loder) { alert('Kepce no secin.'); return; }
+            if (!data.details.hours) { alert('Calisma saati girin.'); return; }
+            data.details.loader_id = loder.id;
+            data.details.loader = loder.name;
+            const { error } = await db.from('entries').insert([{ date: data.date, entry_type: 'loder', location: data.location, details: data.details }]);
+            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
+        }
+
+        function resetForm(formTypeId) {
+            document.querySelectorAll('#dynamicFormContainer input:not([type="date"]), #dynamicFormContainer select, #dynamicFormContainer textarea').forEach(el => { el.value = ''; });
+            document.querySelectorAll('.repeating-rows').forEach(el => el.innerHTML = '');
+            const drillingDynamic = document.getElementById('drillingDynamicFields');
+            if (drillingDynamic) drillingDynamic.innerHTML = '';
         }
 
         initApp();
