@@ -22,6 +22,64 @@
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         select, input { touch-action: manipulation; }
         .repeating-row { background: rgba(30,41,59,0.5); border: 1px solid rgba(255,255,255,0.05); }
+        
+        /* === YENI: Offline & Toast Stilleri === */
+        .offline-badge { 
+            position: fixed; 
+            bottom: 16px; 
+            right: 16px; 
+            background: linear-gradient(135deg, #f59e0b, #d97706); 
+            color: white; 
+            padding: 10px 16px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+            font-size: 13px; 
+            font-weight: 500;
+            z-index: 100; 
+            transition: all 0.3s;
+            display: none;
+            cursor: pointer;
+        }
+        .offline-badge.show { display: flex; align-items: center; gap: 8px; }
+        .offline-badge.syncing { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .offline-badge.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .offline-badge.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 101;
+            animation: slideDown 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .toast.success { background: linear-gradient(135deg, #10b981, #059669); }
+        .toast.info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+        .toast.warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .toast.error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        
+        @keyframes slideDown {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top: 2px solid white;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 <base target="_blank">
 </head>
@@ -31,6 +89,9 @@
             <div class="flex items-center gap-3">
                 <i class="fas fa-hard-hat text-blue-500 text-xl"></i>
                 <span class="font-bold text-base sm:text-lg">Madenci Veri Girisi</span>
+                <span id="networkStatus" class="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 hidden sm:inline">
+                    <i class="fas fa-wifi mr-1"></i>Çevrimiçi
+                </span>
             </div>
             <a href="./admin.html" class="text-sm text-slate-400 hover:text-white transition flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-800">
                 <i class="fas fa-shield-alt text-yellow-500"></i>
@@ -56,6 +117,12 @@
         <div id="dynamicFormContainer"></div>
     </div>
 
+    <!-- Offline Badge -->
+    <div id="offlineBadge" class="offline-badge" onclick="manualSync()">
+        <i class="fas fa-cloud-upload-alt"></i>
+        <span id="offlineCount">0</span> veri bekliyor
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://cxvrcqkkxfblpxzynfya.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
@@ -69,6 +136,7 @@
         let drillingTypes = [];
         let loaders = [];
         let currentFormTypeId = null;
+        let isSyncing = false;
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -78,7 +146,158 @@
             not:          { label: 'Not',          type: 'text' }
         };
 
+        // ============================================
+        // === OFFLINE SYNC MANAGER (YENI EKLENEN) ====
+        // ============================================
+        
+        function getPendingEntries() {
+            return JSON.parse(localStorage.getItem('pending_entries') || '[]');
+        }
+
+        function savePendingEntries(entries) {
+            localStorage.setItem('pending_entries', JSON.stringify(entries));
+        }
+
+        async function saveOfflineEntry(entryData) {
+            const pending = getPendingEntries();
+            pending.push({ 
+                ...entryData, 
+                timestamp: new Date().toISOString(),
+                id: 'pending_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+            });
+            savePendingEntries(pending);
+            updateOfflineBadge();
+        }
+
+        async function saveOfflineBatch(entries) {
+            const pending = getPendingEntries();
+            entries.forEach(entry => {
+                pending.push({ 
+                    ...entry, 
+                    timestamp: new Date().toISOString(),
+                    id: 'pending_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5)
+                });
+            });
+            savePendingEntries(pending);
+            updateOfflineBadge();
+        }
+
+        function updateOfflineBadge() {
+            const pending = getPendingEntries();
+            const badge = document.getElementById('offlineBadge');
+            const countEl = document.getElementById('offlineCount');
+            if (pending.length > 0) {
+                countEl.textContent = pending.length;
+                badge.classList.add('show');
+            } else {
+                badge.classList.remove('show');
+            }
+        }
+
+        async function syncOfflineData(showFeedback = false) {
+            if (!navigator.onLine || isSyncing) return;
+            
+            const pending = getPendingEntries();
+            if (pending.length === 0) return;
+
+            isSyncing = true;
+            const badge = document.getElementById('offlineBadge');
+            badge.classList.add('syncing');
+            badge.innerHTML = '<div class="spinner"></div><span>Senkronize ediliyor...</span>';
+            
+            if (showFeedback) showToast('Senkronizasyon basladi...', 'info');
+
+            const remaining = [];
+            let successCount = 0;
+            
+            for (const entry of pending) {
+                // Timestamp ve id alanlarini temizle
+                const { timestamp, id, ...cleanEntry } = entry;
+                const { error } = await db.from('entries').insert(cleanEntry);
+                if (error) {
+                    remaining.push(entry); // Hata varsa kuyrukta birak
+                } else {
+                    successCount++;
+                }
+            }
+            
+            savePendingEntries(remaining);
+            updateOfflineBadge();
+            
+            isSyncing = false;
+            badge.classList.remove('syncing');
+            
+            if (successCount > 0) {
+                showToast(`✅ ${successCount} cevirimdishi veri basariyla senkronize edildi!`, 'success');
+            }
+            
+            if (remaining.length === 0) {
+                badge.classList.remove('show');
+            }
+        }
+
+        function manualSync() {
+            if (isSyncing) return;
+            if (!navigator.onLine) {
+                showToast('⚠️ İnternet baglantisi yok. Baglanti geldiginde otomatik senkronize edilecek.', 'warning');
+                return;
+            }
+            syncOfflineData(true);
+        }
+
+        function updateNetworkStatus() {
+            const statusEl = document.getElementById('networkStatus');
+            if (navigator.onLine) {
+                statusEl.className = 'text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400';
+                statusEl.innerHTML = '<i class="fas fa-wifi mr-1"></i>Çevrimiçi';
+            } else {
+                statusEl.className = 'text-xs px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400';
+                statusEl.innerHTML = '<i class="fas fa-wifi-slash mr-1"></i>Çevrimdışı';
+            }
+        }
+
+        function showToast(msg, type = 'info') {
+            // Ayni anda sadece bir toast goster
+            document.querySelectorAll('.toast').forEach(t => t.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = 'info-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'warning') icon = 'exclamation-triangle';
+            if (type === 'error') icon = 'times-circle';
+            
+            toast.innerHTML = `<i class="fas fa-${icon}"></i><span>${msg}</span>`;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s';
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Event Listeners
+        window.addEventListener('online', () => {
+            updateNetworkStatus();
+            showToast('🌐 İnternet baglantisi geri geldi! Senkronize ediliyor...', 'info');
+            setTimeout(() => syncOfflineData(false), 1000);
+        });
+        
+        window.addEventListener('offline', () => {
+            updateNetworkStatus();
+            showToast('⚠️ İnternet kesildi. Veriler cihazda guvende.', 'warning');
+        });
+
+        // ============================================
+        // === ANA UYGULAMA KODLARI ==================
+        // ============================================
+
         async function initApp() {
+            updateNetworkStatus();
+            updateOfflineBadge();
+            
             await loadFormTypes();
             await loadCategoriesAndMaterials();
             await loadDrillingTypes();
@@ -86,6 +305,11 @@
             renderFormTypeCards();
             const today = new Date().toISOString().split('T')[0];
             document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+            
+            // Sayfa acilinca bekleyen verileri senkronize etmeye calis
+            if (navigator.onLine) {
+                setTimeout(() => syncOfflineData(false), 1500);
+            }
         }
 
         async function loadFormTypes() {
@@ -324,6 +548,10 @@
             }
         }
 
+        // ============================================
+        // === SUBMIT FONKSIYONLARI (OFFLINE DESTEKLI) ==
+        // ============================================
+
         async function submitEntry(formTypeId) {
             const hp = document.getElementById('website_url');
             if (hp && hp.value.trim() !== '') { alert('Bot tespit edildi.'); return; }
@@ -353,8 +581,20 @@
             } else if (formType.slug === 'loder') {
                 await submitLoder(data, formTypeId);
             } else {
-                const { error } = await db.from('entries').insert([{ date: data.date, entry_type: formType.slug, location: data.location, details: data.details }]);
-                if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
+                const payload = { date: data.date, entry_type: formType.slug, location: data.location, details: data.details };
+                
+                // === OFFLINE KONTROL ===
+                if (!navigator.onLine) {
+                    await saveOfflineEntry(payload);
+                    resetForm(formTypeId);
+                    showToast('📡 Cevrimdisi kaydedildi! Baglanti gelince yuklenecek.', 'warning');
+                    return;
+                }
+                // =======================
+                
+                const { error } = await db.from('entries').insert([payload]);
+                if (error) alert('Hata: ' + error.message); 
+                else { resetForm(formTypeId); showToast('✅ Kayit basariyla eklendi!', 'success'); }
             }
         }
 
@@ -369,8 +609,21 @@
                     if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value;
                 });
             }
-            const { error } = await db.from('entries').insert([{ date: data.date, entry_type: 'drilling', location: data.location, details: data.details }]);
-            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
+            
+            const payload = { date: data.date, entry_type: 'drilling', location: data.location, details: data.details };
+            
+            // === OFFLINE KONTROL ===
+            if (!navigator.onLine) {
+                await saveOfflineEntry(payload);
+                resetForm(formTypeId);
+                showToast('📡 Cevrimdisi kaydedildi! Baglanti gelince yuklenecek.', 'warning');
+                return;
+            }
+            // =======================
+            
+            const { error } = await db.from('entries').insert([payload]);
+            if (error) alert('Hata: ' + error.message); 
+            else { resetForm(formTypeId); showToast('✅ Sondaj kaydi eklendi!', 'success'); }
         }
 
         async function submitMaterial(data, formTypeId) {
@@ -401,8 +654,19 @@
                 if (hasData && rowData.details.material_id) payload.push(rowData);
             });
             if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
+            
+            // === OFFLINE KONTROL ===
+            if (!navigator.onLine) {
+                await saveOfflineBatch(payload);
+                resetForm(formTypeId);
+                showToast(`📡 ${payload.length} malzeme cevirimdishi kaydedildi!`, 'warning');
+                return;
+            }
+            // =======================
+            
             const { error } = await db.from('entries').insert(payload);
-            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert(payload.length + ' malzeme kaydi eklendi!'); }
+            if (error) alert('Hata: ' + error.message); 
+            else { resetForm(formTypeId); showToast(`✅ ${payload.length} malzeme kaydi eklendi!`, 'success'); }
         }
 
         async function submitOre(data, formTypeId) {
@@ -418,8 +682,21 @@
                 }
             });
             if (rows.length === 0) { alert('En az bir miktar girin.'); return; }
-            const { error } = await db.from('entries').insert(rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: d })));
-            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert(rows.length + ' hareket kaydedildi!'); }
+            
+            const payload = rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: d }));
+            
+            // === OFFLINE KONTROL ===
+            if (!navigator.onLine) {
+                await saveOfflineBatch(payload);
+                resetForm(formTypeId);
+                showToast(`📡 ${rows.length} hareket cevirimdishi kaydedildi!`, 'warning');
+                return;
+            }
+            // =======================
+            
+            const { error } = await db.from('entries').insert(payload);
+            if (error) alert('Hata: ' + error.message); 
+            else { resetForm(formTypeId); showToast(`✅ ${rows.length} hareket kaydedildi!`, 'success'); }
         }
 
         async function submitLoder(data, formTypeId) {
@@ -428,8 +705,21 @@
             if (!data.details.hours) { alert('Calisma saati girin.'); return; }
             data.details.loader_id = loder.id;
             data.details.loader = loder.name;
-            const { error } = await db.from('entries').insert([{ date: data.date, entry_type: 'loder', location: data.location, details: data.details }]);
-            if (error) alert('Hata: ' + error.message); else { resetForm(formTypeId); alert('Kaydedildi!'); }
+            
+            const payload = { date: data.date, entry_type: 'loder', location: data.location, details: data.details };
+            
+            // === OFFLINE KONTROL ===
+            if (!navigator.onLine) {
+                await saveOfflineEntry(payload);
+                resetForm(formTypeId);
+                showToast('📡 Cevrimdisi kaydedildi! Baglanti gelince yuklenecek.', 'warning');
+                return;
+            }
+            // =======================
+            
+            const { error } = await db.from('entries').insert([payload]);
+            if (error) alert('Hata: ' + error.message); 
+            else { resetForm(formTypeId); showToast('✅ Loder kaydi eklendi!', 'success'); }
         }
 
         function resetForm(formTypeId) {
