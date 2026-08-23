@@ -72,7 +72,6 @@
                 <div class="flex items-center gap-2">
                     <span id="userName" class="text-sm text-slate-400 hidden sm:inline"></span>
                     <button onclick="showSection('dashboard')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Dashboard"><i class="fas fa-home"></i></button>
-                    <button onclick="showSection('myReports')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Raporlarim"><i class="fas fa-list"></i></button>
                     <button id="adminBtn" onclick="showSection('admin')" class="p-2 rounded-lg hover:bg-slate-700 transition hidden" title="Admin Panel"><i class="fas fa-shield-alt text-yellow-500"></i></button>
                     <button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-red-900/30 text-red-400 transition" title="Cikis"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
@@ -101,7 +100,6 @@
                             <h4 class="font-semibold mb-3 text-slate-300">Hizli Erisim</h4>
                             <div class="space-y-2">
                                 <a href="form.html" target="_blank" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-external-link-alt mr-2 text-green-400"></i>Public Form Portali</a>
-                                <button onclick="showSection('myReports')" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-list mr-2 text-blue-400"></i>Raporlarim</button>
                                 <button onclick="showSection('admin')" id="dashAdminBtn" class="hidden block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-shield-alt mr-2 text-yellow-400"></i>Admin Paneli</button>
                             </div>
                         </div>
@@ -115,21 +113,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="myReportsSection" class="hidden fade-in">
-                <div class="glass rounded-xl p-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        <h2 class="text-xl font-bold"><i class="fas fa-list mr-2 text-green-400"></i>Raporlarim</h2>
-                        <div class="flex gap-2">
-                            <input type="date" id="filterDate" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
-                            <select id="filterType" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
-                                <option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="myReportsList" class="space-y-3"></div>
                 </div>
             </div>
 
@@ -481,7 +464,7 @@
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) { loadMyReports(); loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
+            if (!error) {  loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
         }
 
         function destroyCharts() {
