@@ -610,7 +610,8 @@
             const groupsByKey = {};
             entries.forEach(entry => {
                 const details = entry.details || {};
-                const key = details.submission_id || entry.id;
+                const reporter = getReporterName(entry);
+                const key = details.submission_id ? details.submission_id + '|' + entry.location : entry.date + '|' + entry.entry_type + '|' + reporter + '|' + entry.location;
                 if (!groupsByKey[key]) {
                     groupsByKey[key] = { date: entry.date, entry_type: entry.entry_type, entries: [] };
                     groups.push(groupsByKey[key]);
