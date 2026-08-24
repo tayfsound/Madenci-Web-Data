@@ -229,6 +229,10 @@
             document.getElementById('selectionScreen').classList.remove('hidden');
             document.getElementById('formScreens').classList.add('hidden');
             ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
+            document.getElementById('d_type').value = '';
+            document.getElementById('d_dynamicFields').innerHTML = '';
+            document.getElementById('d_typeHint').textContent = 'Delgi tipini secince o tipe ait alanlar acılır.';
+            document.getElementById('d_typeHint').classList.remove('hidden');
         }
 
         function openForm(type) {
