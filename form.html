@@ -371,7 +371,7 @@
         }
 
         function renderTavanFields(container) {
-            container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-2 gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
+            container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-[1fr_1fr_auto] gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span><span></span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
                 '<div class="col-span-2">' + createDrillingField('Toplam metraj (m)', 'number', 'd_tavanTotalMeters', '0') + '</div>';
             addTavanRow(true);
         }
@@ -385,9 +385,13 @@
                 return Number.isFinite(sequence) && sequence > highest ? sequence : highest;
             }, 0);
             const row = document.createElement('div');
-            row.className = 'grid grid-cols-2 gap-3';
+            row.className = 'grid grid-cols-[1fr_1fr_auto] gap-3 items-center';
             const nextSequence = !isInitialRow && lastSequence > 0 ? ' value="' + (lastSequence + 1) + '"' : '';
-            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"' + nextSequence + '><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
+            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"' + nextSequence + '><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı"><button type="button" class="remove-tavan-row text-red-400 hover:text-red-300 text-lg" title="Satırı kaldır"><i class="fas fa-times"></i></button>';
+            row.querySelector('.remove-tavan-row').addEventListener('click', () => {
+                if (rows.querySelectorAll('.d-tavan-row').length === 1) return;
+                row.remove();
+            });
             rows.appendChild(row);
         }
 
