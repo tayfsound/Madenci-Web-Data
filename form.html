@@ -37,15 +37,14 @@
                 <span class="hidden sm:inline">Admin</span>
             </a>
         </div>
-    </nav>
+                        <div class="col-span-2">
+                            <label class="block text-xs font-medium text-slate-300 mb-2">Malzeme Kalemleri</label>
+                            <div id="materialRows" class="space-y-2"></div>
+                            <button type="button" onclick="addMaterialRow()" class="mt-3 w-full py-3 rounded-xl border-2 border-dashed border-slate-600 hover:border-blue-500 text-slate-400 hover:text-blue-400 transition flex items-center justify-center gap-2 text-sm">
+                                <i class="fas fa-plus-circle"></i><span>Malzeme Ekle</span>
+                            </button>
+                        </div>
 
-    <!-- Honeypot -->
-    <div class="honeypot"><input type="text" id="website_url" tabindex="-1" autocomplete="off"></div>
-
-    <!-- SELECTION SCREEN -->
-    <div id="selectionScreen" class="max-w-2xl mx-auto px-4 py-6 fade-in">
-        <div class="text-center mb-6">
-            <h2 class="text-xl sm:text-2xl font-bold mb-2">Hangi raporu girmek istiyorsunuz?</h2>
             <p class="text-slate-400 text-sm">Asagidaki seceneklerden birini secin</p>
         </div>
         <div class="grid grid-cols-2 gap-3 sm:gap-4">
@@ -123,10 +122,7 @@
                         <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="m_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="m_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="m_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="m_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="m_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                     <div>
                         <label class="block text-xs font-medium text-slate-300 mb-2">Malzeme Kalemleri</label>
                         <div id="materialRows" class="space-y-2"></div>
@@ -243,7 +239,7 @@
             const { data: locs } = await db.from('locations').select('*').order('name');
             if (locs) {
                 locations = locs;
-                ['d_location','m_location','o_location'].forEach(id => {
+                ['d_location','o_location'].forEach(id => {
                     const sel = document.getElementById(id);
                     if (sel) { sel.innerHTML = '<option value="">Sec</option>'; locs.forEach(l => { const o = document.createElement('option'); o.value = l.name; o.textContent = l.name; sel.appendChild(o); }); }
                 });
@@ -460,7 +456,7 @@
                 }
             } else if (type === 'material') {
                 data.date = document.getElementById('m_date').value;
-                data.location = document.getElementById('m_location').value;
+                data.location = 'Genel';
                 const rows = document.querySelectorAll('#materialRows .material-row');
                 const payload = [];
                 for (const row of rows) {
