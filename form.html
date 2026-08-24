@@ -67,8 +67,8 @@
                 <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-orange-500/10 flex items-center justify-center">
                     <i class="fas fa-dolly text-2xl text-orange-400"></i>
                 </div>
-                <div class="font-semibold text-sm sm:text-base">Cevher / Pasa</div>
-                <div class="text-xs text-slate-500 mt-1">Lokomotif hareketleri</div>
+                <div class="font-semibold text-sm sm:text-base">Lokomotif</div>
+                <div class="text-xs text-slate-500 mt-1">Lojistik hareketleri</div>
             </button>
             <button onclick="openForm('loder')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-purple-500/50 hover:bg-slate-800/60">
                 <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -141,7 +141,7 @@
             <div class="glass rounded-2xl p-5 sm:p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center"><i class="fas fa-dolly text-orange-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Cevher / Pasa</h3><p class="text-xs text-slate-400">Lokomotif hareket girisi</p></div>
+                    <div><h3 class="font-bold text-lg">Lokomotif</h3><p class="text-xs text-slate-400">Lojistik hareketleri</p></div>
                 </div>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-3">
@@ -209,6 +209,10 @@
             { id: '00000000-0000-4000-8000-000000000001', name: 'Ayna', fields: [] },
             { id: '00000000-0000-4000-8000-000000000002', name: 'Tavan', fields: [] }
         ];
+
+        function normalizeTurkishText(value) {
+            return value.toLocaleLowerCase('tr-TR').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g').replace(/[üÜ]/g, 'u').replace(/[öÖ]/g, 'o').replace(/[çÇ]/g, 'c');
+        }
 
         async function initApp() {
             await loadCategoriesAndMaterials();
@@ -342,13 +346,13 @@
         }
 
         function renderAynaFields(container) {
-            const explosiveCategory = categories.find(category => category.name.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i') === 'patlayicilar');
+            const explosiveCategory = categories.find(category => normalizeTurkishText(category.name).includes('patlay'));
             const explosives = explosiveCategory ? (materialsByCategory[explosiveCategory.id] || []) : [];
             container.innerHTML = '<div class="col-span-2">' +
                 '<label class="block text-xs text-slate-400 mb-1.5">Cevher mi Patar mı?</label>' +
                 '<select id="d_ayna_materialType" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="cevher">Cevher</option><option value="patar">Patar</option></select>' +
                 '</div><div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div id="d_explosiveRows" class="space-y-2">' +
-                (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar" required></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcılar kategorisinde ürün bulunamadı.</p>') +
+                (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') +
                 '</div>';
         }
 
@@ -449,9 +453,8 @@
                 if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
                     const materialType = document.getElementById('d_ayna_materialType').value;
                     const explosiveInputs = Array.from(document.querySelectorAll('.d-explosive-qty'));
-                    const explosives = explosiveInputs.map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
+                    const explosives = explosiveInputs.filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
                     if (!materialType) { alert('Cevher veya Patar seçin.'); return; }
-                    if (explosiveInputs.some(input => input.value.trim() === '')) { alert('Tüm patlayıcı miktarlarını girin.'); return; }
                     data.details.material_type = materialType;
                     data.details.explosives = explosives;
                 } else if (tip.name.toLocaleLowerCase('tr-TR') === 'tavan') {
