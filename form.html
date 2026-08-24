@@ -96,6 +96,10 @@
                 </div>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="d_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="d_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="d_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="d_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
                     </div>
@@ -115,6 +119,10 @@
                     <div><h3 class="font-bold text-lg">Malzeme Kullanımı</h3><p class="text-xs text-slate-400">Malzeme takip girisi</p></div>
                 </div>
                 <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="m_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="m_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="m_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="m_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
@@ -139,6 +147,10 @@
                     <div><h3 class="font-bold text-lg">Cevher / Pasa</h3><p class="text-xs text-slate-400">Lokomotif hareket girisi</p></div>
                 </div>
                 <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="o_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="o_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="o_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Lokasyon</label><select id="o_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
@@ -171,6 +183,10 @@
                     <div><h3 class="font-bold text-lg">Loder Calısması</h3><p class="text-xs text-slate-400">Kepce operasyon girisi</p></div>
                 </div>
                 <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="ld_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="ld_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                    </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="ld_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Kepce No</label><select id="ld_loader" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
@@ -271,6 +287,36 @@
             renderDrillingFields();
         }
 
+        function createDrillingField(label, type, id, placeholder) {
+            return '<div><label class="block text-xs text-slate-400 mb-1.5">' + label + '</label><input type="' + type + '" id="' + id + '" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="' + (placeholder || '') + '"></div>';
+        }
+
+        function renderAynaFields(container) {
+            const explosiveCategory = categories.find(category => category.name.toLocaleLowerCase('tr-TR').replace(/ı/g, 'i') === 'patlayicilar');
+            const explosives = explosiveCategory ? (materialsByCategory[explosiveCategory.id] || []) : [];
+            container.innerHTML = '<div class="col-span-2">' +
+                '<label class="block text-xs text-slate-400 mb-1.5">Cevher mi Patar mı?</label>' +
+                '<select id="d_ayna_materialType" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="cevher">Cevher</option><option value="patar">Patar</option></select>' +
+                '</div><div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div id="d_explosiveRows" class="space-y-2">' +
+                (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar" required></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcılar kategorisinde ürün bulunamadı.</p>') +
+                '</div>';
+        }
+
+        function renderTavanFields(container) {
+            container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-2 gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
+                '<div class="col-span-2">' + createDrillingField('Toplam metraj (m)', 'number', 'd_tavanTotalMeters', '0') + '</div>';
+            addTavanRow();
+        }
+
+        function addTavanRow() {
+            const rows = document.getElementById('d_tavanRows');
+            if (!rows) return;
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-2 gap-3';
+            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
+            rows.appendChild(row);
+        }
+
         function renderDrillingFields() {
             const kapsayici = document.getElementById('d_dynamicFields');
             const ipucu = document.getElementById('d_typeHint');
@@ -281,6 +327,16 @@
             if (!tip) {
                 ipucu.textContent = drillingTypes.length === 0 ? 'Henüz delgi tipi tanımlanmamıs.' : 'Delgi tipini secince o tipe ait alanlar acılır.';
                 ipucu.classList.remove('hidden');
+                return;
+            }
+            if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
+                ipucu.classList.add('hidden');
+                renderAynaFields(kapsayici);
+                return;
+            }
+            if (tip.name.toLocaleLowerCase('tr-TR') === 'tavan') {
+                ipucu.classList.add('hidden');
+                renderTavanFields(kapsayici);
                 return;
             }
             let alanlar = [];
@@ -327,6 +383,10 @@
         async function submitEntry(type) {
             const hp = document.getElementById('website_url');
             if (hp && hp.value.trim() !== '') { alert('Bot tespit edildi.'); return; }
+            const firstName = document.getElementById(type === 'loder' ? 'ld_firstName' : type.charAt(0) + '_firstName').value.trim();
+            const lastName = document.getElementById(type === 'loder' ? 'ld_lastName' : type.charAt(0) + '_lastName').value.trim();
+            if (!firstName || !lastName) { alert('İsim ve soyisim zorunludur.'); return; }
+            const reporter = { first_name: firstName, last_name: lastName };
 
             let data = { date: '', location: '', details: {} };
 
@@ -335,8 +395,25 @@
                 if (!tip) { alert('Delgi tipi secin.'); return; }
                 data.date = document.getElementById('d_date').value;
                 data.location = document.getElementById('d_location').value;
-                data.details = { drilling_type_id: tip.id, drilling_type: tip.name };
-                document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => { if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value; });
+                data.details = { ...reporter, drilling_type_id: tip.id, drilling_type: tip.name };
+                if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
+                    const materialType = document.getElementById('d_ayna_materialType').value;
+                    const explosiveInputs = Array.from(document.querySelectorAll('.d-explosive-qty'));
+                    const explosives = explosiveInputs.map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
+                    if (!materialType) { alert('Cevher veya Patar seçin.'); return; }
+                    if (explosiveInputs.some(input => input.value.trim() === '')) { alert('Tüm patlayıcı miktarlarını girin.'); return; }
+                    data.details.material_type = materialType;
+                    data.details.explosives = explosives;
+                } else if (tip.name.toLocaleLowerCase('tr-TR') === 'tavan') {
+                    const rowInputs = Array.from(document.querySelectorAll('.d-tavan-row'));
+                    const holeInputs = Array.from(document.querySelectorAll('.d-tavan-holes'));
+                    data.details.holes = rowInputs.map((input, index) => ({ row: input.value, hole_count: holeInputs[index].value })).filter(item => item.row || item.hole_count);
+                    data.details.total_meters = document.getElementById('d_tavanTotalMeters').value;
+                    if (!data.details.holes.length || data.details.holes.some(item => !item.row || !item.hole_count)) { alert('En az bir tam sıra ve delik sayısı girin.'); return; }
+                    if (!data.details.total_meters) { alert('Toplam metraj girin.'); return; }
+                } else {
+                    document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => { if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value; });
+                }
             } else if (type === 'material') {
                 data.date = document.getElementById('m_date').value;
                 data.location = document.getElementById('m_location').value;
@@ -345,7 +422,7 @@
                 for (const row of rows) {
                     const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), qty = row.querySelector('.m-qty'), unit = row.querySelector('.m-unit');
                     if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
-                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
+                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
                 }
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
                 const { error } = await db.from('entries').insert(payload);
@@ -364,7 +441,7 @@
                 if (pi) rows.push({ type: 'pasa', quantity: pi, direction: 'iceri', shift });
                 if (pd) rows.push({ type: 'pasa', quantity: pd, direction: 'disari', shift });
                 if (rows.length === 0) { alert('En az bir miktar girin.'); return; }
-                const { error } = await db.from('entries').insert(rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: d })));
+                const { error } = await db.from('entries').insert(rows.map(d => ({ date: data.date, entry_type: 'ore', location: data.location, details: { ...reporter, ...d } })));
                 if (error) alert('Hata: ' + error.message);
                 else { ['o_cevher_iceri','o_cevher_disari','o_pasa_iceri','o_pasa_disari'].forEach(id => document.getElementById(id).value = ''); alert(rows.length + ' hareket kaydedildi!'); }
                 return;
@@ -375,7 +452,7 @@
                 if (saat === '') { alert('Calısma saati girin.'); return; }
                 data.date = document.getElementById('ld_date').value;
                 data.location = document.getElementById('ld_location').value;
-                data.details = { loader_id: loder.id, loader: loder.name, hours: saat, cevher_kovasi: document.getElementById('ld_cevher_kovasi').value.trim() || '0', pasa_kovasi: document.getElementById('ld_pasa_kovasi').value.trim() || '0', shift: document.getElementById('ld_shift').value };
+                data.details = { ...reporter, loader_id: loder.id, loader: loder.name, hours: saat, cevher_kovasi: document.getElementById('ld_cevher_kovasi').value.trim() || '0', pasa_kovasi: document.getElementById('ld_pasa_kovasi').value.trim() || '0', shift: document.getElementById('ld_shift').value };
             }
 
             if (!data.date || !data.location) { alert('Tarih ve lokasyon zorunlu!'); return; }

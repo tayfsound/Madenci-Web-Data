@@ -560,29 +560,38 @@
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
         function formatDetails(entry) {
             const d = entry.details;
+            const reporter = d.first_name && d.last_name ? d.first_name + ' ' + d.last_name : '';
             if (entry.entry_type === 'drilling') {
                 if (!d.drilling_type) return d.meter + 'm | Sira ' + d.row + ' | ' + d.holes;
                 const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
+                if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'ayna') {
+                    const explosives = Array.isArray(d.explosives) ? d.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : '';
+                    return [reporter, d.drilling_type, d.material_type ? (d.material_type === 'cevher' ? 'Cevher' : 'Patar') : '', explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | ');
+                }
+                if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
+                    const holes = Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik').join(', ') : '';
+                    return [reporter, d.drilling_type, holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : ''].filter(Boolean).join(' | ');
+                }
                 let alanlar = [];
                 if (tip && Array.isArray(tip.fields)) {
                     if (tip.fields.length > 0 && typeof tip.fields[0] === 'string') {
                         alanlar = tip.fields.map(key => { const legacy = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text' }; return { key, label: legacy.label }; });
                     } else { alanlar = tip.fields.map(f => ({ key: f.key, label: f.label })); }
                 } else { alanlar = Object.keys(d).filter(k => k !== 'drilling_type_id' && k !== 'drilling_type').map(k => ({ key: k, label: LEGACY_FIELD_LABELS[k] ? LEGACY_FIELD_LABELS[k].label : k })); }
-                const parcalar = [d.drilling_type];
+                const parcalar = [reporter, d.drilling_type];
                 alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
                 return parcalar.join(' | ');
             }
-            if (entry.entry_type === 'material') return d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category;
+            if (entry.entry_type === 'material') return [reporter, d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category].filter(Boolean).join(' | ');
             if (entry.entry_type === 'loder') {
                 let sonuc = 'Kepce ' + d.loader + ' | ' + d.hours + ' saat';
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc += ' | Cevher: ' + d.cevher_kovasi + ' kova';
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc += ' | Pasa: ' + d.pasa_kovasi + ' kova';
                 if (d.shift) sonuc += ' | ' + shiftLabel(d.shift);
-                return sonuc;
+                return [reporter, sonuc].filter(Boolean).join(' | ');
             }
-            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return oreTypeLabel(d.type) + ' ' + d.quantity + ' ' + yon + ' | ' + (d.shift ? shiftLabel(d.shift) : ''); }
-            return JSON.stringify(d);
+            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [reporter, oreTypeLabel(d.type) + ' ' + d.quantity + ' ' + yon + ' | ' + (d.shift ? shiftLabel(d.shift) : '')].filter(Boolean).join(' | '); }
+            return [reporter, JSON.stringify(d)].filter(Boolean).join(' | ');
         }
 
         function RLS_DELETE_UYARISI(tablo) {
