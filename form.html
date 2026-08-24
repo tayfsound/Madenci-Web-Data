@@ -369,10 +369,10 @@
         function renderTavanFields(container) {
             container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-2 gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
                 '<div class="col-span-2">' + createDrillingField('Toplam metraj (m)', 'number', 'd_tavanTotalMeters', '0') + '</div>';
-            addTavanRow();
+            addTavanRow(true);
         }
 
-        function addTavanRow() {
+        function addTavanRow(isInitialRow = false) {
             const rows = document.getElementById('d_tavanRows');
             if (!rows) return;
             const sequenceInputs = Array.from(rows.querySelectorAll('.d-tavan-row'));
@@ -382,7 +382,8 @@
             }, 0);
             const row = document.createElement('div');
             row.className = 'grid grid-cols-2 gap-3';
-            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"' + (lastSequence > 0 ? ' value="' + (lastSequence + 1) + '"' : '') + '><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
+            const nextSequence = !isInitialRow && lastSequence > 0 ? ' value="' + (lastSequence + 1) + '"' : '';
+            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"' + nextSequence + '><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
             rows.appendChild(row);
         }
 
