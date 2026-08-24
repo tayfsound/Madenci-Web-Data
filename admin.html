@@ -122,10 +122,9 @@
                     <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Kullanici</label><input type="text" id="adminUser" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Ad soyad"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
-                        <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Detay Arama</label><input type="text" id="adminSearch" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi, delgi tipi vs."></div>
+                        <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select id="adminDrillingType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm delgi tipleri</option></select></div>
                         <div class="flex items-end gap-2">
                             <button onclick="applyAdminFilters()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-search mr-1"></i>Filtrele</button>
                             <button onclick="clearAdminFilters()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium"><i class="fas fa-undo mr-1"></i>Temizle</button>
@@ -144,7 +143,7 @@
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="border-b border-slate-700 text-slate-400">
-                                <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">Kullanici</th><th class="text-right py-3 px-2">Islem</th></tr>
+                                <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-right py-3 px-2">İşlem</th></tr>
                             </thead>
                             <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
                         </table>
@@ -235,6 +234,7 @@
         let currentAdminData = [];
         let chartType, chartLocation, chartOre, chartDaily;
         let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
+        const BUILTIN_DRILLING_TYPE_NAMES = ['Ayna', 'Tavan'];
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -305,6 +305,18 @@
         async function loadDrillingTypes() {
             const { data: types, error } = await db.from('drilling_types').select('*').order('name');
             if (!error) drillingTypes = types || [];
+            const select = document.getElementById('adminDrillingType');
+            if (select) {
+                const selectedType = select.value;
+                select.innerHTML = '<option value="">Tüm delgi tipleri</option>';
+                [...BUILTIN_DRILLING_TYPE_NAMES, ...drillingTypes.map(type => type.name).filter(name => !BUILTIN_DRILLING_TYPE_NAMES.includes(name))].forEach(typeName => {
+                    const option = document.createElement('option');
+                    option.value = typeName;
+                    option.textContent = typeName;
+                    select.appendChild(option);
+                });
+                if (BUILTIN_DRILLING_TYPE_NAMES.includes(selectedType) || drillingTypes.some(type => type.name === selectedType)) select.value = selectedType;
+            }
         }
 
         async function initApp() {
@@ -401,8 +413,7 @@
             const endDate = document.getElementById('adminEndDate').value;
             const loc = document.getElementById('adminLoc').value;
             const type = document.getElementById('adminType').value;
-            const user = document.getElementById('adminUser').value.trim().toLowerCase();
-            const search = document.getElementById('adminSearch').value.trim().toLowerCase();
+            const drillingType = document.getElementById('adminDrillingType').value;
             let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
             if (startDate) query = query.gte('date', startDate);
             if (endDate) query = query.lte('date', endDate);
@@ -411,8 +422,7 @@
             const { data, error } = await query;
             if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
             let filtered = data || [];
-            if (user) filtered = filtered.filter(e => getReporterName(e).toLocaleLowerCase('tr-TR').includes(user));
-            if (search) filtered = filtered.filter(e => JSON.stringify(e.details).toLowerCase().includes(search));
+            if (drillingType) filtered = filtered.filter(e => e.entry_type === 'drilling' && e.details && e.details.drilling_type === drillingType);
             currentAdminData = filtered;
             const tbody = document.getElementById('adminTableBody');
             if (!filtered.length) {
@@ -444,10 +454,9 @@
         function clearAdminFilters() {
             document.getElementById('adminStartDate').value = '';
             document.getElementById('adminEndDate').value = '';
-            document.getElementById('adminUser').value = '';
             document.getElementById('adminLoc').value = '';
             document.getElementById('adminType').value = '';
-            document.getElementById('adminSearch').value = '';
+            document.getElementById('adminDrillingType').value = '';
             loadAdminData();
         }
         function populateEditLocationOptions(selectedLocation) {
@@ -592,7 +601,7 @@
         function exportExcel() {
             if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
             const ws = XLSX.utils.json_to_sheet(currentAdminData.map(e => ({
-                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'Kullanici': getReporterName(e)
+                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'İsim Soyisim': getReporterName(e)
             })));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Raporlar');
@@ -604,7 +613,7 @@
             const doc = new jsPDF();
             doc.text('Gunluk Raporlar', 14, 15);
             doc.autoTable({
-                head: [['Tarih', 'Tip', 'Lokasyon', 'Detay', 'Kullanici']],
+                head: [['Tarih', 'Tip', 'Lokasyon', 'Detay', 'İsim Soyisim']],
                 body: currentAdminData.map(e => [e.date, getTypeLabel(e.entry_type), e.location, formatDetails(e), getReporterName(e)]),
                 startY: 20, styles: { fontSize: 8 }
             });
