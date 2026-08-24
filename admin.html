@@ -378,7 +378,7 @@
             container.innerHTML = groups.slice(0, 10).map(group => {
                 const firstEntry = group.entries[0];
                 const details = firstEntry.details || {};
-                const reporter = details.first_name && details.last_name ? details.first_name + ' ' + details.last_name : (group.profile && group.profile.full_name ? group.profile.full_name : 'İsim bilgisi yok');
+                const reporter = getReporterName(firstEntry);
                 const locations = [...new Set(group.entries.map(entry => entry.location))].join(', ');
                 return `
                 <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(group.entry_type)}">
@@ -411,7 +411,7 @@
             const { data, error } = await query;
             if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
             let filtered = data || [];
-            if (user) filtered = filtered.filter(e => e.profiles && e.profiles.full_name && e.profiles.full_name.toLowerCase().includes(user));
+            if (user) filtered = filtered.filter(e => getReporterName(e).toLocaleLowerCase('tr-TR').includes(user));
             if (search) filtered = filtered.filter(e => JSON.stringify(e.details).toLowerCase().includes(search));
             currentAdminData = filtered;
             const tbody = document.getElementById('adminTableBody');
@@ -426,7 +426,7 @@
                     <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(e.entry_type)}</span></td>
                     <td class="py-3 px-2 font-medium">${e.location}</td>
                     <td class="py-3 px-2 text-slate-300">${formatDetails(e)}</td>
-                    <td class="py-3 px-2 text-xs text-slate-400">${e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'}</td>
+                    <td class="py-3 px-2 text-xs text-slate-400">${getReporterName(e)}</td>
                     <td class="py-3 px-2 text-right whitespace-nowrap"><button onclick="openEditEntry('${e.id}')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('');
@@ -592,7 +592,7 @@
         function exportExcel() {
             if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
             const ws = XLSX.utils.json_to_sheet(currentAdminData.map(e => ({
-                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'Kullanici': e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'
+                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'Kullanici': getReporterName(e)
             })));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Raporlar');
@@ -605,13 +605,19 @@
             doc.text('Gunluk Raporlar', 14, 15);
             doc.autoTable({
                 head: [['Tarih', 'Tip', 'Lokasyon', 'Detay', 'Kullanici']],
-                body: currentAdminData.map(e => [e.date, getTypeLabel(e.entry_type), e.location, formatDetails(e), e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim']),
+                body: currentAdminData.map(e => [e.date, getTypeLabel(e.entry_type), e.location, formatDetails(e), getReporterName(e)]),
                 startY: 20, styles: { fontSize: 8 }
             });
             doc.save('raporlar_' + new Date().toISOString().split('T')[0] + '.pdf');
         }
 
-        function getTypeLabel(type) { return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher/Pasa', loder: 'Loder' }[type] || type; }
+        function getReporterName(entry) {
+            const details = entry.details || {};
+            if (details.first_name && details.last_name) return details.first_name + ' ' + details.last_name;
+            if (entry.profiles && entry.profiles.full_name) return entry.profiles.full_name;
+            return 'İsim bilgisi yok';
+        }
+        function getTypeLabel(type) { return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder' }[type] || type; }
         function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
         function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
