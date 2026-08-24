@@ -375,9 +375,14 @@
         function addTavanRow() {
             const rows = document.getElementById('d_tavanRows');
             if (!rows) return;
+            const sequenceInputs = Array.from(rows.querySelectorAll('.d-tavan-row'));
+            const lastSequence = sequenceInputs.reduce((highest, input) => {
+                const sequence = Number(input.value);
+                return Number.isFinite(sequence) && sequence > highest ? sequence : highest;
+            }, 0);
             const row = document.createElement('div');
             row.className = 'grid grid-cols-2 gap-3';
-            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
+            row.innerHTML = '<input type="number" min="0" class="d-tavan-row input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Sıra no"' + (lastSequence > 0 ? ' value="' + (lastSequence + 1) + '"' : '') + '><input type="number" min="0" class="d-tavan-holes input-dark w-full px-3 py-2.5 rounded-xl" placeholder="Delik sayısı">';
             rows.appendChild(row);
         }
 
