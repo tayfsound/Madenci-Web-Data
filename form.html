@@ -205,6 +205,11 @@
             not:          { label: 'Not',          type: 'text' }
         };
 
+        const BUILTIN_DRILLING_TYPES = [
+            { id: '00000000-0000-4000-8000-000000000001', name: 'Ayna', fields: [] },
+            { id: '00000000-0000-4000-8000-000000000002', name: 'Tavan', fields: [] }
+        ];
+
         async function initApp() {
             await loadCategoriesAndMaterials();
             await loadDrillingTypes();
@@ -321,7 +326,11 @@
 
         async function loadDrillingTypes() {
             const { data: types } = await db.from('drilling_types').select('*').order('name');
-            drillingTypes = types || [];
+            const databaseTypes = types || [];
+            drillingTypes = BUILTIN_DRILLING_TYPES.map(builtinType => databaseTypes.find(type => type.name.toLocaleLowerCase('tr-TR') === builtinType.name.toLocaleLowerCase('tr-TR')) || builtinType);
+            databaseTypes.forEach(type => {
+                if (!drillingTypes.some(existingType => existingType.name.toLocaleLowerCase('tr-TR') === type.name.toLocaleLowerCase('tr-TR'))) drillingTypes.push(type);
+            });
             const sel = document.getElementById('d_type');
             sel.innerHTML = '<option value="">Sec</option>';
             drillingTypes.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; sel.appendChild(o); });
