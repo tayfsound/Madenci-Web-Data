@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madenci Admin Paneli</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; }
+        .input-dark:focus { outline: none; border-color: #3b82f6; }
+        .btn-primary { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-success { background: linear-gradient(135deg, #10b981, #059669); }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .entry-card { transition: all 0.2s; }
+        .entry-card:hover { transform: translateX(4px); border-left-color: #3b82f6; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .btn-outline { border: 1px solid #334155; background: transparent; }
+        .btn-outline:hover { background: #334155; }
+    </style>
+<base target="_blank">
+</head>
+<body class="min-h-screen">
+
+    <div id="authScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass rounded-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <i class="fas fa-hard-hat text-4xl text-blue-500 mb-3"></i>
+                <h1 class="text-2xl font-bold">Madenci Admin Paneli</h1>
+                <p class="text-slate-400 text-sm mt-1">Madencilik & Imalat Takip Sistemi</p>
+            </div>
+            <div id="loginForm">
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium mb-1">Email</label><input type="email" id="loginEmail" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="ornek@email.com"></div>
+                    <div><label class="block text-sm font-medium mb-1">Sifre</label><input type="password" id="loginPassword" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="••••••••"></div>
+                    <button onclick="handleLogin()" class="btn-primary w-full py-3 rounded-lg font-semibold hover:opacity-90 transition"><i class="fas fa-sign-in-alt mr-2"></i>Giris Yap</button>
+                </div>
+                <p class="text-center mt-4 text-sm text-slate-400">Hesabin yok mu? <button onclick="toggleAuth()" class="text-blue-400 hover:underline">Kayit Ol</button></p>
+            </div>
+            <div id="registerForm" class="hidden">
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium mb-1">Ad Soyad</label><input type="text" id="regName" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="Ali Veli"></div>
+                    <div><label class="block text-sm font-medium mb-1">Email</label><input type="email" id="regEmail" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="ornek@email.com"></div>
+                    <div><label class="block text-sm font-medium mb-1">Sifre</label><input type="password" id="regPassword" class="input-dark w-full px-4 py-3 rounded-lg" placeholder="En az 6 karakter"></div>
+                    <button onclick="handleRegister()" class="btn-success w-full py-3 rounded-lg font-semibold hover:opacity-90 transition"><i class="fas fa-user-plus mr-2"></i>Kayit Ol</button>
+                </div>
+                <p class="text-center mt-4 text-sm text-slate-400">Zaten hesabin var? <button onclick="toggleAuth()" class="text-blue-400 hover:underline">Giris Yap</button></p>
+            </div>
+            <div id="authMessage" class="mt-4 text-center text-sm hidden"></div>
+        </div>
+    </div>
+
+    <div id="appScreen" class="hidden min-h-screen">
+        <nav class="glass sticky top-0 z-50 border-b border-slate-700">
+            <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-hard-hat text-blue-500 text-xl"></i>
+                    <span class="font-bold text-lg hidden sm:inline">Madenci Admin</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="userName" class="text-sm text-slate-400 hidden sm:inline"></span>
+                    <button onclick="showSection('dashboard')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Dashboard"><i class="fas fa-home"></i></button>
+                    <button onclick="showSection('myReports')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Raporlarim"><i class="fas fa-list"></i></button>
+                    <button id="adminBtn" onclick="showSection('admin')" class="p-2 rounded-lg hover:bg-slate-700 transition hidden" title="Admin Panel"><i class="fas fa-shield-alt text-yellow-500"></i></button>
+                    <button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-red-900/30 text-red-400 transition" title="Cikis"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-6">
+
+            <div id="dashboardSection" class="fade-in">
+                <div class="grid lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2 space-y-6">
+                        <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
+                        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-green-400" id="dashDrill">-</div><div class="text-xs text-slate-400">Sondaj (Bugun)</div></div>
+                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-blue-400" id="dashMat">-</div><div class="text-xs text-slate-400">Malzeme (Bugun)</div></div>
+                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-yellow-400" id="dashOre">-</div><div class="text-xs text-slate-400">Cevher/Pasa (Bugun)</div></div>
+                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-purple-400" id="dashLoder">-</div><div class="text-xs text-slate-400">Loder (Bugun)</div></div>
+                        </div>
+                        <div class="glass rounded-xl p-5">
+                            <h4 class="font-semibold mb-3 text-slate-300">Son Kayitlar (Tumu)</h4>
+                            <div id="dashRecentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm"><p class="text-slate-500 text-center py-4">Kayit yok</p></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="glass rounded-xl p-5">
+                            <h4 class="font-semibold mb-3 text-slate-300">Hizli Erisim</h4>
+                            <div class="space-y-2">
+                                <a href="form.html" target="_blank" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-external-link-alt mr-2 text-green-400"></i>Public Form Portali</a>
+                                <button onclick="showSection('myReports')" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-list mr-2 text-blue-400"></i>Raporlarim</button>
+                                <button onclick="showSection('admin')" id="dashAdminBtn" class="hidden block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-shield-alt mr-2 text-yellow-400"></i>Admin Paneli</button>
+                            </div>
+                        </div>
+                        <div class="glass rounded-xl p-5">
+                            <h4 class="font-semibold mb-3 text-slate-300">Bugun Ozeti</h4>
+                            <div id="todayStats" class="space-y-2 text-sm">
+                                <div class="flex justify-between"><span class="text-slate-400">Sondaj:</span><span class="font-mono" id="statDrill">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Malzeme:</span><span class="font-mono" id="statMat">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Cevher/Pasa:</span><span class="font-mono" id="statOre">-</span></div>
+                                <div class="flex justify-between"><span class="text-slate-400">Loder:</span><span class="font-mono" id="statLoder">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="myReportsSection" class="hidden fade-in">
+                <div class="glass rounded-xl p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold"><i class="fas fa-list mr-2 text-green-400"></i>Raporlarim</h2>
+                        <div class="flex gap-2">
+                            <input type="date" id="filterDate" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                            <select id="filterType" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
+                                <option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="myReportsList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <div id="adminSection" class="hidden fade-in">
+                <div class="glass rounded-xl p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4"><i class="fas fa-filter mr-2 text-green-400"></i>Rapor Filtreleri</h2>
+                    <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Kullanici</label><input type="text" id="adminUser" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Ad soyad"></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><input type="text" id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Lokasyon..."></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
+                        <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Detay Arama</label><input type="text" id="adminSearch" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi, delgi tipi vs."></div>
+                        <div class="flex items-end gap-2">
+                            <button onclick="applyAdminFilters()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-search mr-1"></i>Filtrele</button>
+                            <button onclick="clearAdminFilters()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium"><i class="fas fa-undo mr-1"></i>Temizle</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass rounded-xl p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                        <h2 class="text-xl font-bold"><i class="fas fa-table mr-2 text-green-400"></i>Kayitlar</h2>
+                        <div class="flex gap-2">
+                            <button onclick="exportExcel()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium"><i class="fas fa-file-excel mr-1"></i>Excel</button>
+                            <button onclick="exportPDF()" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="border-b border-slate-700 text-slate-400">
+                                <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">Kullanici</th><th class="text-right py-3 px-2">Islem</th></tr>
+                            </thead>
+                            <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                    <div id="adminSummary" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+                </div>
+
+                <div class="glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-chart-bar mr-2 text-green-400"></i>Istatistikler</h3>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div><canvas id="chartType"></canvas></div>
+                        <div><canvas id="chartLocation"></canvas></div>
+                        <div><canvas id="chartOre"></canvas></div>
+                        <div><canvas id="chartDaily"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-bold mb-4"><i class="fas fa-cogs mr-2 text-green-400"></i>Kategori & Malzeme Yonetimi</h3>
+                    <div class="grid sm:grid-cols-3 gap-6">
+                        <div>
+                            <h4 class="font-semibold text-blue-300 mb-3">Kategoriler</h4>
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" id="newCategoryName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="Yeni kategori">
+                                <button onclick="addCategory()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="categoriesList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-green-300 mb-3">Malzemeler</h4>
+                            <div class="space-y-2 mb-4">
+                                <select id="materialCategorySelect" class="input-dark w-full px-3 py-2 rounded-lg text-sm" onchange="loadMaterialsList()"><option value="">Kategori sec</option></select>
+                                <input type="text" id="newMaterialName" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi">
+                                <button onclick="addMaterial()" class="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus mr-1"></i>Ekle</button>
+                            </div>
+                            <div id="materialsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-purple-300 mb-3">Lokasyonlar</h4>
+                            <div class="flex gap-2 mb-4">
+                                <input type="text" id="newLocationName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="Yeni lokasyon">
+                                <button onclick="addLocation()" class="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-sm font-medium"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="locationsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass rounded-xl p-6 mt-6">
+                    <h3 class="text-lg font-bold mb-1"><i class="fas fa-truck-pickup mr-2 text-green-400"></i>Loderler</h3>
+                    <p class="text-sm text-slate-400 mb-4">Kepce numaralarini burada tanimla; loder formunda bu listeden secilir.</p>
+                    <div class="flex gap-2 mb-4 max-w-md">
+                        <input type="text" id="newLoaderName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="orn: Kepce 3">
+                        <button onclick="addLoader()" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div id="loadersList" class="space-y-2 max-w-md border border-slate-700 rounded p-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://cxvrcqkkxfblpxzynfya.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        let currentUser = null;
+        let isAdmin = false;
+        let currentAdminData = [];
+        let chartType, chartLocation, chartOre, chartDaily;
+        let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
+
+        const LEGACY_FIELD_LABELS = {
+            atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
+            sira_no:      { label: 'Sira No',      type: 'text' },
+            delik_sayisi: { label: 'Delik Sayisi', type: 'number' },
+            metre:        { label: 'Metre',        type: 'number' },
+            not:          { label: 'Not',          type: 'text' }
+        };
+
+        function toggleAuth() {
+            document.getElementById('loginForm').classList.toggle('hidden');
+            document.getElementById('registerForm').classList.toggle('hidden');
+            document.getElementById('authMessage').classList.add('hidden');
+        }
+        function showAuthMessage(msg, isError) {
+            const el = document.getElementById('authMessage');
+            el.textContent = msg;
+            el.className = 'mt-4 text-center text-sm ' + (isError ? 'text-red-400' : 'text-green-400');
+            el.classList.remove('hidden');
+        }
+        async function handleRegister() {
+            const name = document.getElementById('regName').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            if (!email || !password || password.length < 6) { showAuthMessage('Email ve en az 6 karakter sifre gerekli', true); return; }
+            const { error } = await db.auth.signUp({ email, password, options: { data: { full_name: name } } });
+            if (error) showAuthMessage(error.message, true); else showAuthMessage('Kayit basarili! Email dogrulama linkini kontrol edin.');
+        }
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            const { error } = await db.auth.signInWithPassword({ email, password });
+            if (error) showAuthMessage(error.message, true);
+        }
+        async function handleLogout() { await db.auth.signOut(); location.reload(); }
+
+        async function loadCategoriesAndMaterials() {
+            const { data: cats } = await db.from('categories').select('*').order('name');
+            if (cats) categories = cats;
+            const { data: mats } = await db.from('materials').select('*').order('name');
+            if (mats) {
+                materialsByCategory = {};
+                mats.forEach(mat => { if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = []; materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name }); });
+            }
+            const { data: locs } = await db.from('locations').select('*').order('name');
+            if (locs) locations = locs;
+        }
+        async function loadLoaders() {
+            const { data, error } = await db.from('loaders').select('*').order('name');
+            if (!error) loaders = data || [];
+        }
+        async function loadDrillingTypes() {
+            const { data: types, error } = await db.from('drilling_types').select('*').order('name');
+            if (!error) drillingTypes = types || [];
+        }
+
+        async function initApp() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                document.getElementById('authScreen').classList.add('hidden');
+                document.getElementById('appScreen').classList.remove('hidden');
+                document.getElementById('userName').textContent = currentUser.email;
+                const { data: profile } = await db.from('profiles').select('is_admin').eq('id', currentUser.id).single();
+                if (profile && profile.is_admin) {
+                    isAdmin = true;
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                    document.getElementById('dashAdminBtn').classList.remove('hidden');
+                }
+                await loadCategoriesAndMaterials();
+                await loadDrillingTypes();
+                await loadLoaders();
+                const today = new Date().toISOString().split('T')[0];
+                document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+                loadDashboardStats(); loadTodayStats(); loadDashRecentEntries();
+            }
+        }
+        db.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') initApp();
+            if (event === 'SIGNED_OUT') location.reload();
+        });
+
+        function showSection(section) {
+            ['dashboard', 'myReports', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
+            document.getElementById(section + 'Section').classList.remove('hidden');
+            if (section === 'myReports') loadMyReports();
+            if (section === 'admin') {
+                loadAdminData(); loadCategoriesList(); loadLocationsList(); loadLoadersList();
+                const select = document.getElementById('materialCategorySelect');
+                select.innerHTML = '<option value="">Kategori sec</option>';
+                categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.id; opt.textContent = cat.name; select.appendChild(opt); });
+            }
+        }
+
+        async function loadDashboardStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await db.from('entries').select('*').eq('date', today);
+            document.getElementById('dashDrill').textContent = (data ? data.filter(e => e.entry_type === 'drilling').length : 0);
+            document.getElementById('dashMat').textContent = (data ? data.filter(e => e.entry_type === 'material').length : 0);
+            document.getElementById('dashOre').textContent = (data ? data.filter(e => e.entry_type === 'ore').length : 0);
+            document.getElementById('dashLoder').textContent = (data ? data.filter(e => e.entry_type === 'loder').length : 0);
+        }
+        async function loadTodayStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const { data } = await db.from('entries').select('*').eq('date', today);
+            document.getElementById('statDrill').textContent = ((data ? data.filter(e => e.entry_type === 'drilling').length : 0) + ' kayit');
+            document.getElementById('statMat').textContent = ((data ? data.filter(e => e.entry_type === 'material').length : 0) + ' kayit');
+            document.getElementById('statOre').textContent = ((data ? data.filter(e => e.entry_type === 'ore').length : 0) + ' kayit');
+            document.getElementById('statLoder').textContent = ((data ? data.filter(e => e.entry_type === 'loder').length : 0) + ' kayit');
+        }
+        async function loadDashRecentEntries() {
+            const { data } = await db.from('entries').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(10);
+            const container = document.getElementById('dashRecentEntries');
+            if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-4">Kayit yok</p>'; return; }
+            container.innerHTML = data.map(e => `
+                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(e.entry_type)}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs text-slate-400">${e.date} &mdash; ${e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'}</span>
+                            <div class="font-medium">${e.location}</div>
+                            <div class="text-xs text-slate-400">${formatDetails(e)}</div>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadMyReports() {
+            const date = document.getElementById('filterDate').value;
+            const type = document.getElementById('filterType').value;
+            let query = db.from('entries').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
+            if (date) query = query.eq('date', date);
+            if (type) query = query.eq('entry_type', type);
+            const { data } = await query;
+            const container = document.getElementById('myReportsList');
+            if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-8">Kayit bulunamadi</p>'; return; }
+            container.innerHTML = data.map(e => `
+                <div class="glass rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-xs px-2 py-0.5 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                            <span class="text-sm text-slate-400">${e.date}</span>
+                        </div>
+                        <div class="font-semibold text-lg">${e.location}</div>
+                        <div class="text-sm text-slate-300">${formatDetails(e)}</div>
+                    </div>
+                    <button onclick="deleteEntry('${e.id}')" class="btn-danger px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('');
+        }
+
+        async function loadAdminData() {
+            if (!isAdmin) return;
+            const startDate = document.getElementById('adminStartDate').value;
+            const endDate = document.getElementById('adminEndDate').value;
+            const loc = document.getElementById('adminLoc').value.trim();
+            const type = document.getElementById('adminType').value;
+            const user = document.getElementById('adminUser').value.trim().toLowerCase();
+            const search = document.getElementById('adminSearch').value.trim().toLowerCase();
+            let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
+            if (startDate) query = query.gte('date', startDate);
+            if (endDate) query = query.lte('date', endDate);
+            if (loc) query = query.ilike('location', '%' + loc + '%');
+            if (type) query = query.eq('entry_type', type);
+            const { data, error } = await query;
+            if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
+            let filtered = data || [];
+            if (user) filtered = filtered.filter(e => e.profiles && e.profiles.full_name && e.profiles.full_name.toLowerCase().includes(user));
+            if (search) filtered = filtered.filter(e => JSON.stringify(e.details).toLowerCase().includes(search));
+            currentAdminData = filtered;
+            const tbody = document.getElementById('adminTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">Kayit bulunamadi</td></tr>';
+                document.getElementById('adminSummary').innerHTML = '';
+                destroyCharts(); return;
+            }
+            tbody.innerHTML = filtered.map(e => `
+                <tr class="hover:bg-slate-800/50">
+                    <td class="py-3 px-2 whitespace-nowrap">${e.date}</td>
+                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(e.entry_type)}</span></td>
+                    <td class="py-3 px-2 font-medium">${e.location}</td>
+                    <td class="py-3 px-2 text-slate-300">${formatDetails(e)}</td>
+                    <td class="py-3 px-2 text-xs text-slate-400">${e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'}</td>
+                    <td class="py-3 px-2 text-right"><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `).join('');
+            const summary = { drilling: 0, material: 0, ore: 0, loder: 0 };
+            filtered.forEach(e => summary[e.entry_type]++);
+            document.getElementById('adminSummary').innerHTML = `
+                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.drilling}</div><div class="text-xs text-slate-400">Sondaj</div></div>
+                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.material}</div><div class="text-xs text-slate-400">Malzeme</div></div>
+                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.ore}</div><div class="text-xs text-slate-400">Cevher/Pasa</div></div>
+                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.loder}</div><div class="text-xs text-slate-400">Loder</div></div>
+            `;
+            renderAdminCharts(filtered);
+        }
+        function applyAdminFilters() { loadAdminData(); }
+        function clearAdminFilters() {
+            document.getElementById('adminStartDate').value = '';
+            document.getElementById('adminEndDate').value = '';
+            document.getElementById('adminUser').value = '';
+            document.getElementById('adminLoc').value = '';
+            document.getElementById('adminType').value = '';
+            document.getElementById('adminSearch').value = '';
+            loadAdminData();
+        }
+        async function deleteEntry(id) {
+            if (!confirm('Silmek istediginize emin misiniz?')) return;
+            const { error } = await db.from('entries').delete().eq('id', id);
+            if (!error) { loadMyReports(); loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
+        }
+
+        function destroyCharts() {
+            [chartType, chartLocation, chartOre, chartDaily].forEach(c => { if (c) { c.destroy(); } });
+            chartType = chartLocation = chartOre = chartDaily = null;
+        }
+        function renderAdminCharts(data) {
+            destroyCharts();
+            if (!data.length) return;
+            const typeCounts = { drilling: 0, material: 0, ore: 0, loder: 0 };
+            data.forEach(e => { if (typeCounts[e.entry_type] !== undefined) typeCounts[e.entry_type]++; });
+            const ctxType = document.getElementById('chartType').getContext('2d');
+            chartType = new Chart(ctxType, {
+                type: 'pie',
+                data: { labels: ['Sondaj', 'Malzeme', 'Cevher/Pasa', 'Loder'], datasets: [{ data: [typeCounts.drilling, typeCounts.material, typeCounts.ore, typeCounts.loder], backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6'] }] },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Tip Dagilimi' } } }
+            });
+            const locCounts = {};
+            data.forEach(e => { locCounts[e.location] = (locCounts[e.location] || 0) + 1; });
+            const locLabels = Object.keys(locCounts);
+            const locValues = locLabels.map(l => locCounts[l]);
+            const ctxLoc = document.getElementById('chartLocation').getContext('2d');
+            chartLocation = new Chart(ctxLoc, {
+                type: 'bar',
+                data: { labels: locLabels, datasets: [{ label: 'Kayit Sayisi', data: locValues, backgroundColor: '#3b82f6' }] },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Lokasyon Dagilimi' } } }
+            });
+            const oreTotals = { cevher_iceri: 0, cevher_disari: 0, pasa_iceri: 0, pasa_disari: 0 };
+            data.filter(e => e.entry_type === 'ore').forEach(e => {
+                const d = e.details;
+                const key = d.type + '_' + d.direction;
+                if (key in oreTotals) oreTotals[key] += Number(d.quantity) || 0;
+            });
+            const ctxOre = document.getElementById('chartOre').getContext('2d');
+            chartOre = new Chart(ctxOre, {
+                type: 'bar',
+                data: { labels: ['Cevher Iceri', 'Cevher Disari', 'Pasa Iceri', 'Pasa Disari'], datasets: [{ label: 'Miktar', data: [oreTotals.cevher_iceri, oreTotals.cevher_disari, oreTotals.pasa_iceri, oreTotals.pasa_disari], backgroundColor: ['#34d399', '#f87171', '#a78bfa', '#fb923c'] }] },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Cevher/Pasa Hareketleri' } } }
+            });
+            const dailyCounts = {};
+            data.forEach(e => { dailyCounts[e.date] = (dailyCounts[e.date] || 0) + 1; });
+            const sortedDates = Object.keys(dailyCounts).sort();
+            const dailyValues = sortedDates.map(d => dailyCounts[d]);
+            const ctxDaily = document.getElementById('chartDaily').getContext('2d');
+            chartDaily = new Chart(ctxDaily, {
+                type: 'line',
+                data: { labels: sortedDates, datasets: [{ label: 'Gunluk Kayit', data: dailyValues, borderColor: '#10b981', tension: 0.1 }] },
+                options: { responsive: true, plugins: { title: { display: true, text: 'Gunluk Kayit Sayisi' } } }
+            });
+        }
+
+        function exportExcel() {
+            if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
+            const ws = XLSX.utils.json_to_sheet(currentAdminData.map(e => ({
+                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'Kullanici': e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'
+            })));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Raporlar');
+            XLSX.writeFile(wb, 'raporlar_' + new Date().toISOString().split('T')[0] + '.xlsx');
+        }
+        function exportPDF() {
+            if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text('Gunluk Raporlar', 14, 15);
+            doc.autoTable({
+                head: [['Tarih', 'Tip', 'Lokasyon', 'Detay', 'Kullanici']],
+                body: currentAdminData.map(e => [e.date, getTypeLabel(e.entry_type), e.location, formatDetails(e), e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim']),
+                startY: 20, styles: { fontSize: 8 }
+            });
+            doc.save('raporlar_' + new Date().toISOString().split('T')[0] + '.pdf');
+        }
+
+        function getTypeLabel(type) { return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Cevher/Pasa', loder: 'Loder' }[type] || type; }
+        function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
+        function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
+        function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
+        function formatDetails(entry) {
+            const d = entry.details;
+            if (entry.entry_type === 'drilling') {
+                if (!d.drilling_type) return d.meter + 'm | Sira ' + d.row + ' | ' + d.holes;
+                const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
+                let alanlar = [];
+                if (tip && Array.isArray(tip.fields)) {
+                    if (tip.fields.length > 0 && typeof tip.fields[0] === 'string') {
+                        alanlar = tip.fields.map(key => { const legacy = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text' }; return { key, label: legacy.label }; });
+                    } else { alanlar = tip.fields.map(f => ({ key: f.key, label: f.label })); }
+                } else { alanlar = Object.keys(d).filter(k => k !== 'drilling_type_id' && k !== 'drilling_type').map(k => ({ key: k, label: LEGACY_FIELD_LABELS[k] ? LEGACY_FIELD_LABELS[k].label : k })); }
+                const parcalar = [d.drilling_type];
+                alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
+                return parcalar.join(' | ');
+            }
+            if (entry.entry_type === 'material') return d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category;
+            if (entry.entry_type === 'loder') {
+                let sonuc = 'Kepce ' + d.loader + ' | ' + d.hours + ' saat';
+                if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc += ' | Cevher: ' + d.cevher_kovasi + ' kova';
+                if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc += ' | Pasa: ' + d.pasa_kovasi + ' kova';
+                if (d.shift) sonuc += ' | ' + shiftLabel(d.shift);
+                return sonuc;
+            }
+            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return oreTypeLabel(d.type) + ' ' + d.quantity + ' ' + yon + ' | ' + (d.shift ? shiftLabel(d.shift) : ''); }
+            return JSON.stringify(d);
+        }
+
+        function RLS_DELETE_UYARISI(tablo) {
+            return 'Silinemedi: veritabani bu satiri silmene izin vermiyor.\n\nSupabase SQL Editor\'de sunu calistir:\n\ncreate policy ' + tablo + '_delete on public.' + tablo + '\n  for delete to authenticated\n  using (public.is_admin());';
+        }
+        async function loadCategoriesList() {
+            const { data: cats, error } = await db.from('categories').select('*').order('name');
+            if (error) { alert('Kategoriler yuklenemedi: ' + error.message); return; }
+            const div = document.getElementById('categoriesList');
+            div.innerHTML = '';
+            if (!cats || cats.length === 0) { div.textContent = 'Kategori yok'; return; }
+            cats.forEach(cat => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                const span = document.createElement('span'); span.textContent = cat.name;
+                const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteCategory(cat.id));
+                item.appendChild(span); item.appendChild(btn); div.appendChild(item);
+            });
+        }
+        async function addCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) return alert('Kategori adi giriniz');
+            const { error } = await db.from('categories').insert([{ name }]);
+            if (error) alert('Hata: ' + error.message);
+            else { document.getElementById('newCategoryName').value = ''; loadCategoriesList(); await loadCategoriesAndMaterials(); }
+        }
+        async function deleteCategory(id) {
+            if (!confirm('Kategoriyi sil? (Malzemeleri de silinecek)')) return;
+            const { data, error } = await db.from('categories').delete().eq('id', id).select();
+            if (error) return alert('Silme hatasi: ' + error.message);
+            if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('categories'));
+            loadCategoriesList(); await loadCategoriesAndMaterials();
+        }
+        async function loadMaterialsList() {
+            const catId = document.getElementById('materialCategorySelect').value;
+            const div = document.getElementById('materialsList');
+            if (!catId) { div.innerHTML = '<p class="text-slate-500 text-sm">Kategori sec</p>'; return; }
+            const { data: mats } = await db.from('materials').select('*').eq('category_id', catId).order('name');
+            div.innerHTML = '';
+            if (!mats || mats.length === 0) { div.textContent = 'Malzeme yok'; return; }
+            mats.forEach(mat => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                const span = document.createElement('span'); span.textContent = mat.name;
+                const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteMaterial(mat.id));
+                item.appendChild(span); item.appendChild(btn); div.appendChild(item);
+            });
+        }
+        async function addMaterial() {
+            const catId = document.getElementById('materialCategorySelect').value;
+            const name = document.getElementById('newMaterialName').value.trim();
+            if (!catId || !name) return alert('Kategori ve malzeme adi gerekli');
+            const { error } = await db.from('materials').insert([{ category_id: catId, name }]);
+            if (error) alert('Hata: ' + error.message);
+            else { document.getElementById('newMaterialName').value = ''; loadMaterialsList(); await loadCategoriesAndMaterials(); }
+        }
+        async function deleteMaterial(id) {
+            if (!confirm('Malzemeyi sil?')) return;
+            const { data, error } = await db.from('materials').delete().eq('id', id).select();
+            if (error) alert('Silme hatasi: ' + error.message);
+            else if (!data || data.length === 0) alert(RLS_DELETE_UYARISI('materials'));
+            else { loadMaterialsList(); await loadCategoriesAndMaterials(); }
+        }
+        async function loadLocationsList() {
+            const { data: locs } = await db.from('locations').select('*').order('name');
+            const div = document.getElementById('locationsList');
+            div.innerHTML = '';
+            if (!locs || locs.length === 0) { div.textContent = 'Lokasyon yok'; return; }
+            locs.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                const span = document.createElement('span'); span.textContent = loc.name;
+                const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteLocation(loc.id));
+                item.appendChild(span); item.appendChild(btn); div.appendChild(item);
+            });
+        }
+        async function addLocation() {
+            const name = document.getElementById('newLocationName').value.trim();
+            if (!name) return alert('Lokasyon adi giriniz');
+            const { error } = await db.from('locations').insert([{ name }]);
+            if (error) alert('Hata: ' + error.message);
+            else { document.getElementById('newLocationName').value = ''; loadLocationsList(); await loadCategoriesAndMaterials(); }
+        }
+        async function deleteLocation(id) {
+            if (!confirm('Lokasyonu sil?')) return;
+            const { data, error } = await db.from('locations').delete().eq('id', id).select();
+            if (error) alert('Silme hatasi: ' + error.message);
+            else if (!data || data.length === 0) alert(RLS_DELETE_UYARISI('locations'));
+            else { loadLocationsList(); await loadCategoriesAndMaterials(); }
+        }
+        async function loadLoadersList() {
+            const { data, error } = await db.from('loaders').select('*').order('name');
+            const div = document.getElementById('loadersList');
+            if (error) { div.textContent = 'Loderler yuklenemedi: ' + error.message; return; }
+            loaders = data || []; div.innerHTML = '';
+            if (loaders.length === 0) { div.innerHTML = '<p class="text-slate-500 text-sm">Henüz kepce tanimlanmamis.</p>'; return; }
+            loaders.forEach(l => {
+                const satir = document.createElement('div'); satir.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
+                const ad = document.createElement('span'); ad.textContent = l.name;
+                const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
+                btn.addEventListener('click', () => deleteLoader(l.id));
+                satir.appendChild(ad); satir.appendChild(btn); div.appendChild(satir);
+            });
+        }
+        async function addLoader() {
+            const ad = document.getElementById('newLoaderName').value.trim();
+            if (!ad) return alert('Kepce numarasi giriniz');
+            const { error } = await db.from('loaders').insert([{ name: ad }]);
+            if (error) return alert('Hata: ' + error.message);
+            document.getElementById('newLoaderName').value = '';
+            await loadLoadersList(); await loadLoaders();
+        }
+        async function deleteLoader(id) {
+            if (!confirm('Kepceyi sil? Bu kepceyle girilmis kayitlar silinmez.')) return;
+            const { data, error } = await db.from('loaders').delete().eq('id', id).select();
+            if (error) return alert('Silme hatasi: ' + error.message);
+            if (!data || data.length === 0) return alert(RLS_DELETE_UYARISI('loaders'));
+            await loadLoadersList(); await loadLoaders();
+        }
+        initApp();
+    </script>
+</body>
+</html>

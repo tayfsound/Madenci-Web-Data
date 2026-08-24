@@ -64,9 +64,16 @@ create table if not exists public.drilling_types (
   created_at timestamptz not null default now()
 );
 
--- Kategori, malzeme, lokasyon ve delgi tipleri admin panelinden yönetiliyor;
--- buraya örnek veri konmuyor. Aksi halde dosya her çalıştırıldığında
--- panelden silinmiş kayıtlar geri gelir.
+-- Loderler (kepçeler). name kepçe numarasını tutar: "3", "L-07" gibi.
+create table if not exists public.loaders (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null unique,
+  created_at timestamptz not null default now()
+);
+
+-- Kategori, malzeme, lokasyon, delgi tipi ve loderler admin panelinden
+-- yönetiliyor; buraya örnek veri konmuyor. Aksi halde dosya her
+-- çalıştırıldığında panelden silinmiş kayıtlar geri gelir.
 
 -- ---------- KAYIT OLUNCA PROFİL AÇ ----------
 -- Kodda profiles'a hiçbir yerde insert yok, sadece okuma var. Profil
@@ -116,6 +123,7 @@ alter table public.categories     enable row level security;
 alter table public.locations      enable row level security;
 alter table public.materials      enable row level security;
 alter table public.drilling_types enable row level security;
+alter table public.loaders        enable row level security;
 
 -- ---------- RLS ----------
 
@@ -189,6 +197,23 @@ create policy drilling_types_update on public.drilling_types
   with check (public.is_admin());
 
 create policy drilling_types_delete on public.drilling_types
+  for delete to authenticated
+  using (public.is_admin());
+
+-- Loderler: herkes okur, yalnızca admin yazar
+drop policy if exists loaders_select on public.loaders;
+drop policy if exists loaders_insert on public.loaders;
+drop policy if exists loaders_delete on public.loaders;
+
+create policy loaders_select on public.loaders
+  for select to authenticated
+  using (true);
+
+create policy loaders_insert on public.loaders
+  for insert to authenticated
+  with check (public.is_admin());
+
+create policy loaders_delete on public.loaders
   for delete to authenticated
   using (public.is_admin());
 
