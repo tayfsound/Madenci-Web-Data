@@ -84,6 +84,7 @@
                 <div class="grid lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-6">
                         <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
+                        <div id="dashboardStats" class="space-y-4"></div>
                         <div class="glass rounded-xl p-5">
                             <h4 class="font-semibold mb-3 text-slate-300">Son Kayitlar (Tumu)</h4>
                             <div id="dashRecentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm"><p class="text-slate-500 text-center py-4">Kayit yok</p></div>
@@ -95,15 +96,6 @@
                             <div class="space-y-2">
                                 <a href="form.html" target="_blank" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-external-link-alt mr-2 text-green-400"></i>Public Form Portali</a>
                                 <button onclick="showSection('admin')" id="dashAdminBtn" class="hidden block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-shield-alt mr-2 text-yellow-400"></i>Admin Paneli</button>
-                            </div>
-                        </div>
-                        <div class="glass rounded-xl p-5">
-                            <h4 class="font-semibold mb-3 text-slate-300">Bugun Ozeti</h4>
-                            <div id="todayStats" class="space-y-2 text-sm">
-                                <div class="flex justify-between"><span class="text-slate-400">Sondaj:</span><span class="font-mono" id="statDrill">-</span></div>
-                                <div class="flex justify-between"><span class="text-slate-400">Malzeme:</span><span class="font-mono" id="statMat">-</span></div>
-                                <div class="flex justify-between"><span class="text-slate-400">Cevher/Pasa:</span><span class="font-mono" id="statOre">-</span></div>
-                                <div class="flex justify-between"><span class="text-slate-400">Loder:</span><span class="font-mono" id="statLoder">-</span></div>
                             </div>
                         </div>
                     </div>
@@ -352,7 +344,7 @@
                 await loadLoaders();
                 const today = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
-                loadTodayStats(); loadDashRecentEntries();
+                loadDashboardStats(); loadDashRecentEntries();
             }
         }
         db.auth.onAuthStateChange((event, session) => {
@@ -371,13 +363,55 @@
             }
         }
 
-        async function loadTodayStats() {
-            const today = new Date().toISOString().split('T')[0];
-            const { data } = await db.from('entries').select('*').eq('date', today);
-            document.getElementById('statDrill').textContent = ((data ? data.filter(e => e.entry_type === 'drilling').length : 0) + ' kayit');
-            document.getElementById('statMat').textContent = ((data ? data.filter(e => e.entry_type === 'material').length : 0) + ' kayit');
-            document.getElementById('statOre').textContent = ((data ? data.filter(e => e.entry_type === 'ore').length : 0) + ' kayit');
-            document.getElementById('statLoder').textContent = ((data ? data.filter(e => e.entry_type === 'loder').length : 0) + ' kayit');
+        function formatDashboardNumber(value) {
+            return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/\.00$/, '');
+        }
+        function getLocalDateString(date) {
+            return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+        }
+        function getDashboardPeriods() {
+            const today = new Date();
+            const todayString = getLocalDateString(today);
+            const weekStart = new Date(today);
+            const dayOfWeek = weekStart.getDay() || 7;
+            weekStart.setDate(weekStart.getDate() - dayOfWeek + 1);
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            return [
+                { key: 'today', label: 'Bugun', start: todayString },
+                { key: 'week', label: 'Bu Hafta', start: getLocalDateString(weekStart) },
+                { key: 'month', label: 'Bu Ay', start: getLocalDateString(monthStart) }
+            ];
+        }
+        function calculateDashboardStats(entries, startDate) {
+            const periodEntries = entries.filter(entry => entry.date >= startDate);
+            const stats = { loaderOre: 0, loaderWaste: 0, locomotiveOre: 0, locomotiveWaste: 0, meters: 0, materials: {} };
+            periodEntries.forEach(entry => {
+                const details = entry.details || {};
+                if (entry.entry_type === 'loder') {
+                    stats.loaderOre += Number(details.cevher_kovasi) || 0;
+                    stats.loaderWaste += Number(details.pasa_kovasi) || 0;
+                } else if (entry.entry_type === 'ore') {
+                    if (details.type === 'cevher') stats.locomotiveOre += Number(details.quantity) || 0;
+                    if (details.type === 'pasa') stats.locomotiveWaste += Number(details.quantity) || 0;
+                } else if (entry.entry_type === 'drilling' && String(details.drilling_type || '').toLocaleLowerCase('tr-TR') === 'tavan') {
+                    stats.meters += Number(details.total_meters) || 0;
+                } else if (entry.entry_type === 'material' && details.name) {
+                    stats.materials[details.name] = (stats.materials[details.name] || 0) + (Number(details.quantity) || 0);
+                }
+            });
+            return stats;
+        }
+        function renderDashboardStats(periodStats) {
+            const materialNames = [...new Set(periodStats.flatMap(period => Object.keys(period.stats.materials)))].sort((first, second) => first.localeCompare(second, 'tr'));
+            const periodHeaders = periodStats.map(period => '<th class="text-right px-2 py-2 text-xs text-slate-400">' + period.label + '</th>').join('');
+            const materialRows = materialNames.length ? materialNames.map(name => '<tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">' + name + '</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.materials[name] || 0) + '</td>').join('') + '</tr>').join('') : '<tr><td colspan="4" class="py-3 text-sm text-slate-500">Henüz malzeme kaydı yok</td></tr>';
+            document.getElementById('dashboardStats').innerHTML = '<div class="grid lg:grid-cols-2 gap-4"><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-purple-300">Loder Kovaları</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Cevher kovası</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.loaderOre) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Pasa kovası</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.loaderWaste) + '</td>').join('') + '</tr></tbody></table></div><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-orange-300">Lokomotif Vagonları</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Cevher vagonu</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.locomotiveOre) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Pasa vagonu</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.locomotiveWaste) + '</td>').join('') + '</tr></tbody></table></div><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-green-300">Tavan Delgisi</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam metraj</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Metre</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.meters) + ' m</td>').join('') + '</tr></tbody></table></div><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-blue-300">Malzeme Kullanımı</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Ürün</th>' + periodHeaders + '</tr></thead><tbody>' + materialRows + '</tbody></table></div></div>';
+        }
+        async function loadDashboardStats() {
+            const periods = getDashboardPeriods();
+            const { data, error } = await db.from('entries').select('*').gte('date', periods[2].start).order('date', { ascending: false });
+            if (error) { document.getElementById('dashboardStats').innerHTML = '<p class="text-red-400 text-sm">İstatistikler yüklenemedi: ' + error.message + '</p>'; return; }
+            renderDashboardStats(periods.map(period => ({ ...period, stats: calculateDashboardStats(data || [], period.start) })));
         }
         async function loadDashRecentEntries() {
             const { data } = await db.from('entries').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(50);
@@ -553,13 +587,13 @@
             if (error) return alert('Rapor güncellenemedi: ' + error.message);
             closeEditEntry();
             await loadAdminData();
-            loadTodayStats(); loadDashRecentEntries();
+            loadDashboardStats(); loadDashRecentEntries();
             alert('Rapor güncellendi.');
         }
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) { loadAdminData(); loadTodayStats(); loadDashRecentEntries(); }
+            if (!error) { loadAdminData(); loadDashboardStats(); loadDashRecentEntries(); }
         }
 
         function exportExcel() {
