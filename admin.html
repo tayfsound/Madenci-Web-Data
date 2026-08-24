@@ -84,12 +84,6 @@
                 <div class="grid lg:grid-cols-3 gap-6">
                     <div class="lg:col-span-2 space-y-6">
                         <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
-                        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-green-400" id="dashDrill">-</div><div class="text-xs text-slate-400">Sondaj (Bugun)</div></div>
-                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-blue-400" id="dashMat">-</div><div class="text-xs text-slate-400">Malzeme (Bugun)</div></div>
-                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-yellow-400" id="dashOre">-</div><div class="text-xs text-slate-400">Cevher/Pasa (Bugun)</div></div>
-                            <div class="glass rounded-xl p-4 text-center"><div class="text-2xl font-bold text-purple-400" id="dashLoder">-</div><div class="text-xs text-slate-400">Loder (Bugun)</div></div>
-                        </div>
                         <div class="glass rounded-xl p-5">
                             <h4 class="font-semibold mb-3 text-slate-300">Son Kayitlar (Tumu)</h4>
                             <div id="dashRecentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm"><p class="text-slate-500 text-center py-4">Kayit yok</p></div>
@@ -358,7 +352,7 @@
                 await loadLoaders();
                 const today = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
-                loadDashboardStats(); loadTodayStats(); loadDashRecentEntries();
+                loadTodayStats(); loadDashRecentEntries();
             }
         }
         db.auth.onAuthStateChange((event, session) => {
@@ -377,14 +371,6 @@
             }
         }
 
-        async function loadDashboardStats() {
-            const today = new Date().toISOString().split('T')[0];
-            const { data } = await db.from('entries').select('*').eq('date', today);
-            document.getElementById('dashDrill').textContent = (data ? data.filter(e => e.entry_type === 'drilling').length : 0);
-            document.getElementById('dashMat').textContent = (data ? data.filter(e => e.entry_type === 'material').length : 0);
-            document.getElementById('dashOre').textContent = (data ? data.filter(e => e.entry_type === 'ore').length : 0);
-            document.getElementById('dashLoder').textContent = (data ? data.filter(e => e.entry_type === 'loder').length : 0);
-        }
         async function loadTodayStats() {
             const today = new Date().toISOString().split('T')[0];
             const { data } = await db.from('entries').select('*').eq('date', today);
@@ -567,13 +553,13 @@
             if (error) return alert('Rapor güncellenemedi: ' + error.message);
             closeEditEntry();
             await loadAdminData();
-            loadTodayStats(); loadDashRecentEntries(); loadDashboardStats();
+            loadTodayStats(); loadDashRecentEntries();
             alert('Rapor güncellendi.');
         }
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) { loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
+            if (!error) { loadAdminData(); loadTodayStats(); loadDashRecentEntries(); }
         }
 
         function exportExcel() {
