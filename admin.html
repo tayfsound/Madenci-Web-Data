@@ -140,7 +140,7 @@
                         <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Kullanici</label><input type="text" id="adminUser" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Ad soyad"></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><input type="text" id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Lokasyon..."></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Detay Arama</label><input type="text" id="adminSearch" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi, delgi tipi vs."></div>
                         <div class="flex items-end gap-2">
@@ -277,7 +277,23 @@
                 mats.forEach(mat => { if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = []; materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name }); });
             }
             const { data: locs } = await db.from('locations').select('*').order('name');
-            if (locs) locations = locs;
+            if (locs) {
+                locations = locs;
+                populateAdminLocationFilter();
+            }
+        }
+        function populateAdminLocationFilter() {
+            const select = document.getElementById('adminLoc');
+            if (!select) return;
+            const selectedLocation = select.value;
+            select.innerHTML = '<option value="">Tumu</option>';
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.name;
+                option.textContent = location.name;
+                select.appendChild(option);
+            });
+            if (locations.some(location => location.name === selectedLocation)) select.value = selectedLocation;
         }
         async function loadLoaders() {
             const { data, error } = await db.from('loaders').select('*').order('name');
@@ -388,14 +404,14 @@
             if (!isAdmin) return;
             const startDate = document.getElementById('adminStartDate').value;
             const endDate = document.getElementById('adminEndDate').value;
-            const loc = document.getElementById('adminLoc').value.trim();
+            const loc = document.getElementById('adminLoc').value;
             const type = document.getElementById('adminType').value;
             const user = document.getElementById('adminUser').value.trim().toLowerCase();
             const search = document.getElementById('adminSearch').value.trim().toLowerCase();
             let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
             if (startDate) query = query.gte('date', startDate);
             if (endDate) query = query.lte('date', endDate);
-            if (loc) query = query.ilike('location', '%' + loc + '%');
+            if (loc) query = query.eq('location', loc);
             if (type) query = query.eq('entry_type', type);
             const { data, error } = await query;
             if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
