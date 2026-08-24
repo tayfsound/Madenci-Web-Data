@@ -216,9 +216,9 @@
             <div class="grid sm:grid-cols-3 gap-4 mb-4">
                 <div><label class="block text-sm text-slate-400 mb-1">Tarih</label><input type="date" id="editEntryDate" class="input-dark w-full px-3 py-2 rounded-lg"></div>
                 <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="editEntryLocation" class="input-dark w-full px-3 py-2 rounded-lg"></select></div>
-                <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="editEntryType" class="input-dark w-full px-3 py-2 rounded-lg"><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
+                <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="editEntryType" onchange="renderEditEntryFields()" class="input-dark w-full px-3 py-2 rounded-lg"><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Lokomotif</option><option value="loder">Loder</option></select></div>
             </div>
-            <div><label class="block text-sm text-slate-400 mb-1">Rapor Detayları</label><textarea id="editEntryDetails" rows="12" class="input-dark w-full px-3 py-2 rounded-lg font-mono text-sm"></textarea></div>
+            <div id="editEntryFields" class="grid sm:grid-cols-2 gap-4"></div>
             <div class="flex justify-end gap-3 mt-5">
                 <button type="button" onclick="closeEditEntry()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">Iptal</button>
                 <button type="button" onclick="saveEditedEntry()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-save mr-1"></i>Kaydet</button>
@@ -450,6 +450,35 @@
             }
             select.value = selectedLocation || '';
         }
+        let editEntryDetails = {};
+        function editField(label, key, value, type) {
+            return '<div><label class="block text-sm text-slate-400 mb-1">' + label + '</label><input type="' + (type || 'text') + '" data-edit-key="' + key + '" value="' + String(value ?? '').replace(/"/g, '&quot;') + '" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"></div>';
+        }
+        function renderEditEntryFields() {
+            const container = document.getElementById('editEntryFields');
+            const entryType = document.getElementById('editEntryType').value;
+            const details = editEntryDetails || {};
+            let html = editField('İsim', 'first_name', details.first_name || '') + editField('Soyisim', 'last_name', details.last_name || '');
+            if (entryType === 'drilling') {
+                html += '<div><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select data-edit-key="drilling_type" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg">' + drillingTypes.map(type => '<option value="' + type.name + '"' + (type.name === details.drilling_type ? ' selected' : '') + '>' + type.name + '</option>').join('') + '</select></div>';
+                const drillingType = (details.drilling_type || '').toLocaleLowerCase('tr-TR');
+                if (drillingType === 'ayna') {
+                    html += '<div><label class="block text-sm text-slate-400 mb-1">Cevher / Patar</label><select data-edit-key="material_type" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"><option value="cevher"' + (details.material_type === 'cevher' ? ' selected' : '') + '>Cevher</option><option value="patar"' + (details.material_type === 'patar' ? ' selected' : '') + '>Patar</option></select></div><div class="sm:col-span-2"><label class="block text-sm text-slate-400 mb-2">Patlayıcı Kullanımı</label><div class="grid sm:grid-cols-2 gap-3">' + (Array.isArray(details.explosives) ? details.explosives.map((item, index) => editField(item.name, 'explosive_' + index, item.quantity, 'number')).join('') : '') + '</div></div>';
+                } else if (drillingType === 'tavan') {
+                    html += '<div class="sm:col-span-2"><label class="block text-sm text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-2 gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span></div><div id="editTavanRows" class="space-y-2">' + (Array.isArray(details.holes) ? details.holes : [{ row: '', hole_count: '' }]).map(item => '<div class="grid grid-cols-2 gap-3"><input type="number" data-edit-key="tavan_row" data-edit-index="' + (details.holes || []).indexOf(item) + '" value="' + (item.row || '') + '" class="edit-tavan-row input-dark w-full px-3 py-2 rounded-lg"><input type="number" data-edit-key="tavan_holes" data-edit-index="' + (details.holes || []).indexOf(item) + '" value="' + (item.hole_count || '') + '" class="edit-tavan-holes input-dark w-full px-3 py-2 rounded-lg"></div>').join('') + '</div></div>' + editField('Toplam metraj (m)', 'total_meters', details.total_meters, 'number');
+                } else {
+                    const drillingFields = drillingTypes.find(type => type.name === details.drilling_type)?.fields || [];
+                    html += drillingFields.map(field => editField(field.label || field.key, field.key, details[field.key] || '', field.type)).join('');
+                }
+            } else if (entryType === 'material') {
+                html += editField('Kategori', 'category', details.category || '') + editField('Malzeme', 'name', details.name || '') + editField('Miktar', 'quantity', details.quantity || '', 'number') + editField('Birim', 'unit', details.unit || 'adet');
+            } else if (entryType === 'ore') {
+                html += '<div><label class="block text-sm text-slate-400 mb-1">Hareket</label><select data-edit-key="type" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"><option value="cevher"' + (details.type === 'cevher' ? ' selected' : '') + '>Cevher</option><option value="pasa"' + (details.type === 'pasa' ? ' selected' : '') + '>Pasa</option></select></div>' + editField('Miktar', 'quantity', details.quantity || '', 'number') + '<div><label class="block text-sm text-slate-400 mb-1">Yön</label><select data-edit-key="direction" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"><option value="iceri"' + (details.direction === 'iceri' ? ' selected' : '') + '>İçeri</option><option value="disari"' + (details.direction === 'disari' ? ' selected' : '') + '>Dışarı</option></select></div>' + editField('Vardiya', 'shift', details.shift || '');
+            } else if (entryType === 'loder') {
+                html += editField('Kepçe', 'loader', details.loader || '') + editField('Çalışma saati', 'hours', details.hours || '', 'number') + editField('Cevher kova', 'cevher_kovasi', details.cevher_kovasi || '0', 'number') + editField('Pasa kova', 'pasa_kovasi', details.pasa_kovasi || '0', 'number') + editField('Vardiya', 'shift', details.shift || '');
+            }
+            container.innerHTML = html;
+        }
         function openEditEntry(id) {
             const entry = currentAdminData.find(item => item.id === id);
             if (!entry) return alert('Rapor bulunamadi.');
@@ -457,7 +486,8 @@
             document.getElementById('editEntryDate').value = entry.date;
             document.getElementById('editEntryType').value = entry.entry_type;
             populateEditLocationOptions(entry.location);
-            document.getElementById('editEntryDetails').value = JSON.stringify(entry.details || {}, null, 2);
+            editEntryDetails = { ...(entry.details || {}) };
+            renderEditEntryFields();
             document.getElementById('editEntryModal').classList.remove('hidden');
         }
         function closeEditEntry() { document.getElementById('editEntryModal').classList.add('hidden'); }
@@ -467,9 +497,19 @@
             const location = document.getElementById('editEntryLocation').value;
             const entryType = document.getElementById('editEntryType').value;
             if (!date || !location || !entryType) return alert('Tarih, lokasyon ve tip zorunludur.');
-            let details;
-            try { details = JSON.parse(document.getElementById('editEntryDetails').value); }
-            catch (error) { return alert('Rapor detayları geçerli bir JSON formatında olmalıdır.'); }
+            const details = {};
+            document.querySelectorAll('#editEntryFields [data-edit-key]').forEach(field => {
+                if (field.dataset.editKey === 'tavan_row' || field.dataset.editKey === 'tavan_holes') return;
+                details[field.dataset.editKey] = field.value;
+            });
+            if (!details.first_name || !details.last_name) return alert('İsim ve soyisim zorunludur.');
+            if (entryType === 'drilling') {
+                details.drilling_type_id = editEntryDetails.drilling_type_id || '';
+                if (details.drilling_type.toLocaleLowerCase('tr-TR') === 'ayna') details.explosives = (editEntryDetails.explosives || []).map((item, index) => ({ ...item, quantity: document.querySelector('[data-edit-key="explosive_' + index + '"]').value })).filter(item => item.quantity !== '');
+                if (details.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
+                    details.holes = Array.from(document.querySelectorAll('.edit-tavan-row')).map((row, index) => ({ row: row.value, hole_count: document.querySelectorAll('.edit-tavan-holes')[index].value })).filter(item => item.row || item.hole_count);
+                }
+            }
             const { error } = await db.from('entries').update({ date, location, entry_type: entryType, details }).eq('id', id);
             if (error) return alert('Rapor güncellenemedi: ' + error.message);
             closeEditEntry();
