@@ -153,10 +153,10 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="o_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div class="flex items-end"><button type="button" onclick="addOreLocationGroup()" class="w-full py-2.5 rounded-xl border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Lokasyon Ekle</button></div>
+                        <div class="flex items-end"><button type="button" onclick="addOreLocationGroup()" class="w-full py-2.5 rounded-xl border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Çalışma Alanı Ekle</button></div>
                     </div>
                     <div id="oreLocationGroups" class="space-y-4"></div>
-                    <div class="text-xs text-slate-500">Her lokasyon için kendi cevher/pasa hareketlerini girin.</div>
+                    <div class="text-xs text-slate-500">Her çalışma alanı için kendi cevher/pasa hareketlerini girin.</div>
                 </div>
                 <button onclick="submitEntry('ore')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -174,19 +174,10 @@
                         <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="ld_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
                         <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="ld_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="ld_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Kepce No</label><select id="ld_loader" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Calısma Alanı</label><select id="ld_location" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Calısma Saati</label><input type="number" step="0.5" id="ld_hours" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="7.5"></div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Cevher Kova</label><input type="number" id="ld_cevher_kovasi" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div>
-                        <div><label class="block text-xs text-slate-400 mb-1.5">Pasa Kova</label><input type="number" id="ld_pasa_kovasi" class="input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div>
-                    </div>
-                    <div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select id="ld_shift" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>
+                    <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="ld_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
+                    <div class="flex items-end"><button type="button" onclick="addLoderLocationGroup()" class="w-full py-2.5 rounded-xl border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Çalışma Alanı Ekle</button></div>
+                    <div id="loderLocationGroups" class="space-y-4"></div>
+                    <div class="text-xs text-slate-500">Her çalışma alanı için kendi loder bilgilerini girin.</div>
                 </div>
                 <button onclick="submitEntry('loder')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -237,6 +228,7 @@
             document.getElementById('form-' + type).classList.remove('hidden');
             document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => el.value = getTodayDate());
             if (type === 'ore' && !document.querySelector('#oreLocationGroups .ore-location-group')) addOreLocationGroup();
+            if (type === 'loder' && !document.querySelector('#loderLocationGroups .loder-location-group')) addLoderLocationGroup();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -251,11 +243,12 @@
             const { data: locs } = await db.from('locations').select('*').order('name');
             if (locs) {
                 locations = locs;
-                ['d_location','m_location','o_location','ld_location'].forEach(id => {
+                ['d_location','m_location','o_location'].forEach(id => {
                     const sel = document.getElementById(id);
                     if (sel) { sel.innerHTML = '<option value="">Sec</option>'; locs.forEach(l => { const o = document.createElement('option'); o.value = l.name; o.textContent = l.name; sel.appendChild(o); }); }
                 });
                 document.querySelectorAll('.o-location').forEach(select => fillOreLocationSelect(select));
+                document.querySelectorAll('.ld-location').forEach(select => fillOreLocationSelect(select));
             }
         }
 
@@ -275,7 +268,7 @@
             const container = document.getElementById('oreLocationGroups');
             const group = document.createElement('div');
             group.className = 'ore-location-group rounded-xl border border-slate-700/50 border-l-4 border-l-orange-500 p-4 bg-slate-800/30';
-            group.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="block text-sm font-medium text-orange-400">Lokasyon</label><button type="button" class="remove-ore-location hidden text-red-400 hover:text-red-300 text-sm" title="Lokasyonu kaldır"><i class="fas fa-trash"></i></button></div>' +
+            group.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="block text-sm font-medium text-orange-400">Çalışma Alanı</label><button type="button" class="remove-ore-location hidden text-red-400 hover:text-red-300 text-sm" title="Çalışma alanını kaldır"><i class="fas fa-trash"></i></button></div>' +
                 '<select class="o-location input-dark w-full px-3 py-2.5 rounded-xl mb-4"><option value="">Sec</option></select>' +
                 '<div class="rounded-lg border border-slate-700/50 border-l-4 border-l-orange-500 p-3 mb-3"><div class="text-xs font-medium text-orange-400 mb-2">Cevher</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" min="0" class="o-cevher-iceri input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" min="0" class="o-cevher-disari input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div></div></div>' +
                 '<div class="rounded-lg border border-slate-700/50 border-l-4 border-l-slate-500 p-3 mb-3"><div class="text-xs font-medium text-slate-300 mb-2">Pasa</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" min="0" class="o-pasa-iceri input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" min="0" class="o-pasa-disari input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div></div></div>' +
@@ -291,12 +284,42 @@
             groups.forEach(group => group.querySelector('.remove-ore-location').classList.toggle('hidden', groups.length === 1));
         }
 
+        function fillLoderSelect(select) {
+            const selectedLoader = select.value;
+            select.innerHTML = '<option value="">Sec</option>';
+            loaders.forEach(loader => {
+                const option = document.createElement('option');
+                option.value = loader.id;
+                option.textContent = loader.name;
+                select.appendChild(option);
+            });
+            select.value = selectedLoader;
+        }
+
+        function addLoderLocationGroup() {
+            const container = document.getElementById('loderLocationGroups');
+            const group = document.createElement('div');
+            group.className = 'loder-location-group rounded-xl border border-slate-700/50 border-l-4 border-l-purple-500 p-4 bg-slate-800/30';
+            group.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="block text-sm font-medium text-purple-400">Çalışma Alanı</label><button type="button" class="remove-loder-location hidden text-red-400 hover:text-red-300 text-sm" title="Çalışma alanını kaldır"><i class="fas fa-trash"></i></button></div>' +
+                '<div class="grid grid-cols-2 gap-3 mb-4"><div><label class="block text-xs text-slate-400 mb-1.5">Kepçe No</label><select class="ld-loader input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div><div><label class="block text-xs text-slate-400 mb-1.5">Çalışma Alanı</label><select class="ld-location input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div></div>' +
+                '<div class="grid grid-cols-2 gap-3 mb-4"><div><label class="block text-xs text-slate-400 mb-1.5">Çalışma Saati</label><input type="number" step="0.5" class="ld-hours input-dark w-full px-3 py-2.5 rounded-xl" placeholder="7.5"></div><div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select class="ld-shift input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div></div>' +
+                '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1.5">Cevher Kova</label><input type="number" min="0" class="ld-cevher input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1.5">Pasa Kova</label><input type="number" min="0" class="ld-pasa input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div></div>';
+            fillLoderSelect(group.querySelector('.ld-loader'));
+            fillOreLocationSelect(group.querySelector('.ld-location'));
+            group.querySelector('.remove-loder-location').addEventListener('click', () => { group.remove(); updateLoderLocationRemoveButtons(); });
+            container.appendChild(group);
+            updateLoderLocationRemoveButtons();
+        }
+
+        function updateLoderLocationRemoveButtons() {
+            const groups = document.querySelectorAll('#loderLocationGroups .loder-location-group');
+            groups.forEach(group => group.querySelector('.remove-loder-location').classList.toggle('hidden', groups.length === 1));
+        }
+
         async function loadLoaders() {
             const { data } = await db.from('loaders').select('*').order('name');
             loaders = data || [];
-            const sel = document.getElementById('ld_loader');
-            sel.innerHTML = '<option value="">Sec</option>';
-            loaders.forEach(l => { const o = document.createElement('option'); o.value = l.id; o.textContent = l.name; sel.appendChild(o); });
+            document.querySelectorAll('.ld-loader').forEach(select => fillLoderSelect(select));
         }
 
         async function loadDrillingTypes() {
@@ -470,13 +493,21 @@
                 else { document.getElementById('oreLocationGroups').innerHTML = ''; addOreLocationGroup(); alert(rows.length + ' hareket kaydedildi!'); }
                 return;
             } else if (type === 'loder') {
-                const loder = loaders.find(l => l.id === document.getElementById('ld_loader').value);
-                if (!loder) { alert('Kepce no secin.'); return; }
-                const saat = document.getElementById('ld_hours').value.trim();
-                if (saat === '') { alert('Calısma saati girin.'); return; }
-                data.date = document.getElementById('ld_date').value;
-                data.location = document.getElementById('ld_location').value;
-                data.details = { ...reporter, loader_id: loder.id, loader: loder.name, hours: saat, cevher_kovasi: document.getElementById('ld_cevher_kovasi').value.trim() || '0', pasa_kovasi: document.getElementById('ld_pasa_kovasi').value.trim() || '0', shift: document.getElementById('ld_shift').value };
+                const date = document.getElementById('ld_date').value;
+                const rows = [];
+                document.querySelectorAll('#loderLocationGroups .loder-location-group').forEach(group => {
+                    const loaderId = group.querySelector('.ld-loader').value;
+                    const location = group.querySelector('.ld-location').value;
+                    const hours = group.querySelector('.ld-hours').value.trim();
+                    const loader = loaders.find(item => item.id === loaderId);
+                    if (!loader && !location && !hours) return;
+                    rows.push({ date, location, details: { ...reporter, loader_id: loaderId, loader: loader ? loader.name : '', hours, cevher_kovasi: group.querySelector('.ld-cevher').value.trim() || '0', pasa_kovasi: group.querySelector('.ld-pasa').value.trim() || '0', shift: group.querySelector('.ld-shift').value } });
+                });
+                if (!date || !rows.length || rows.some(row => !row.location || !row.details.loader_id || !row.details.hours)) { alert('Tarih, her çalışma alanı, kepçe ve çalışma saati zorunludur.'); return; }
+                const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'loder', location: row.location, details: row.details })));
+                if (error) alert('Hata: ' + error.message);
+                else { document.getElementById('loderLocationGroups').innerHTML = ''; addLoderLocationGroup(); alert(rows.length + ' loder kaydı eklendi!'); }
+                return;
             }
 
             if (!data.date || !data.location) { alert('Tarih ve lokasyon zorunlu!'); return; }
