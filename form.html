@@ -150,6 +150,9 @@
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="o_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select id="o_shift" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>
+                    </div>
+                    <div>
                         <div class="flex items-end"><button type="button" onclick="addOreLocationGroup()" class="w-full py-2.5 rounded-xl border border-orange-500/50 text-orange-400 hover:bg-orange-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Çalışma Alanı Ekle</button></div>
                     </div>
                     <div id="oreLocationGroups" class="space-y-4"></div>
@@ -287,7 +290,7 @@
                 '<select class="o-location input-dark w-full px-3 py-2.5 rounded-xl mb-4"><option value="">Sec</option></select>' +
                 '<div class="rounded-lg border border-slate-700/50 border-l-4 border-l-orange-500 p-3 mb-3"><div class="text-xs font-medium text-orange-400 mb-2">Cevher</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" min="0" class="o-cevher-iceri input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" min="0" class="o-cevher-disari input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div></div></div>' +
                 '<div class="rounded-lg border border-slate-700/50 border-l-4 border-l-slate-500 p-3 mb-3"><div class="text-xs font-medium text-slate-300 mb-2">Pasa</div><div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1">Iceri</label><input type="number" min="0" class="o-pasa-iceri input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1">Disari</label><input type="number" min="0" class="o-pasa-disari input-dark w-full px-3 py-2 rounded-lg" placeholder="0"></div></div></div>' +
-                '<div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select class="o-shift input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>';
+                '';
             fillOreLocationSelect(group.querySelector('.o-location'));
             group.querySelector('.remove-ore-location').addEventListener('click', () => { group.remove(); updateOreLocationRemoveButtons(); });
             container.appendChild(group);
@@ -511,7 +514,7 @@
                 const date = document.getElementById('o_date').value;
                 document.querySelectorAll('#oreLocationGroups .ore-location-group').forEach(group => {
                     const location = group.querySelector('.o-location').value;
-                    const shift = group.querySelector('.o-shift').value;
+                    const shift = document.getElementById('o_shift').value;
                     const quantities = [
                         { type: 'cevher', quantity: group.querySelector('.o-cevher-iceri').value.trim(), direction: 'iceri', shift },
                         { type: 'cevher', quantity: group.querySelector('.o-cevher-disari').value.trim(), direction: 'disari', shift },
