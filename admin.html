@@ -125,6 +125,8 @@
                         <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select id="adminDrillingType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm delgi tipleri</option></select></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Kategori</label><select id="adminCategory" onchange="populateAdminMaterialFilter()" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm kategoriler</option></select></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Malzeme</label><select id="adminMaterial" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm malzemeler</option></select></div>
                         <div class="flex items-end gap-2">
                             <button onclick="applyAdminFilters()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-search mr-1"></i>Filtrele</button>
                             <button onclick="clearAdminFilters()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium"><i class="fas fa-undo mr-1"></i>Temizle</button>
@@ -279,6 +281,7 @@
                 materialsByCategory = {};
                 mats.forEach(mat => { if (!materialsByCategory[mat.category_id]) materialsByCategory[mat.category_id] = []; materialsByCategory[mat.category_id].push({ id: mat.id, name: mat.name }); });
             }
+            populateAdminCategoryFilter();
             const { data: locs } = await db.from('locations').select('*').order('name');
             if (locs) {
                 locations = locs;
@@ -297,6 +300,35 @@
                 select.appendChild(option);
             });
             if (locations.some(location => location.name === selectedLocation)) select.value = selectedLocation;
+        }
+        function populateAdminCategoryFilter() {
+            const select = document.getElementById('adminCategory');
+            if (!select) return;
+            const selectedCategory = select.value;
+            select.innerHTML = '<option value="">Tüm kategoriler</option>';
+            categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.id;
+                option.textContent = category.name;
+                select.appendChild(option);
+            });
+            if (categories.some(category => category.id === selectedCategory)) select.value = selectedCategory;
+            populateAdminMaterialFilter();
+        }
+        function populateAdminMaterialFilter() {
+            const select = document.getElementById('adminMaterial');
+            const categoryId = document.getElementById('adminCategory').value;
+            if (!select) return;
+            const selectedMaterial = select.value;
+            const materials = categoryId ? (materialsByCategory[categoryId] || []) : Object.values(materialsByCategory).flat();
+            select.innerHTML = '<option value="">Tüm malzemeler</option>';
+            materials.forEach(material => {
+                const option = document.createElement('option');
+                option.value = material.id;
+                option.textContent = material.name;
+                select.appendChild(option);
+            });
+            if (materials.some(material => material.id === selectedMaterial)) select.value = selectedMaterial;
         }
         async function loadLoaders() {
             const { data, error } = await db.from('loaders').select('*').order('name');
@@ -414,6 +446,8 @@
             const loc = document.getElementById('adminLoc').value;
             const type = document.getElementById('adminType').value;
             const drillingType = document.getElementById('adminDrillingType').value;
+            const categoryId = document.getElementById('adminCategory').value;
+            const materialId = document.getElementById('adminMaterial').value;
             let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
             if (startDate) query = query.gte('date', startDate);
             if (endDate) query = query.lte('date', endDate);
@@ -423,6 +457,8 @@
             if (error) { alert('Rapor yuklenemedi: ' + error.message); return; }
             let filtered = data || [];
             if (drillingType) filtered = filtered.filter(e => e.entry_type === 'drilling' && e.details && e.details.drilling_type === drillingType);
+            if (categoryId) filtered = filtered.filter(e => e.details && e.details.category_id === categoryId);
+            if (materialId) filtered = filtered.filter(e => e.details && e.details.material_id === materialId);
             currentAdminData = filtered;
             const tbody = document.getElementById('adminTableBody');
             if (!filtered.length) {
@@ -457,6 +493,9 @@
             document.getElementById('adminLoc').value = '';
             document.getElementById('adminType').value = '';
             document.getElementById('adminDrillingType').value = '';
+            document.getElementById('adminCategory').value = '';
+            populateAdminMaterialFilter();
+            document.getElementById('adminMaterial').value = '';
             loadAdminData();
         }
         function populateEditLocationOptions(selectedLocation) {
