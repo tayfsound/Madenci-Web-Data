@@ -467,7 +467,7 @@
             const firstName = document.getElementById(type === 'loder' ? 'ld_firstName' : type.charAt(0) + '_firstName').value.trim();
             const lastName = document.getElementById(type === 'loder' ? 'ld_lastName' : type.charAt(0) + '_lastName').value.trim();
             if (!firstName || !lastName) { alert('İsim ve soyisim zorunludur.'); return; }
-            const reporter = { first_name: firstName, last_name: lastName };
+            const reporter = { first_name: firstName, last_name: lastName, submission_id: crypto.randomUUID() };
 
             let data = { date: '', location: '', details: {} };
 

@@ -361,21 +361,38 @@
             document.getElementById('statLoder').textContent = ((data ? data.filter(e => e.entry_type === 'loder').length : 0) + ' kayit');
         }
         async function loadDashRecentEntries() {
-            const { data } = await db.from('entries').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(10);
+            const { data } = await db.from('entries').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(50);
             const container = document.getElementById('dashRecentEntries');
             if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-4">Kayit yok</p>'; return; }
-            container.innerHTML = data.map(e => `
-                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(e.entry_type)}">
+            const groups = [];
+            const groupsByKey = {};
+            data.forEach(entry => {
+                const details = entry.details || {};
+                const key = details.submission_id || entry.id;
+                if (!groupsByKey[key]) {
+                    groupsByKey[key] = { date: entry.date, entry_type: entry.entry_type, entries: [], profile: entry.profiles };
+                    groups.push(groupsByKey[key]);
+                }
+                groupsByKey[key].entries.push(entry);
+            });
+            container.innerHTML = groups.slice(0, 10).map(group => {
+                const firstEntry = group.entries[0];
+                const details = firstEntry.details || {};
+                const reporter = details.first_name && details.last_name ? details.first_name + ' ' + details.last_name : (group.profile && group.profile.full_name ? group.profile.full_name : 'İsim bilgisi yok');
+                const locations = [...new Set(group.entries.map(entry => entry.location))].join(', ');
+                return `
+                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(group.entry_type)}">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="text-xs text-slate-400">${e.date} &mdash; ${e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'}</span>
-                            <div class="font-medium">${e.location}</div>
-                            <div class="text-xs text-slate-400">${formatDetails(e)}</div>
+                            <span class="text-xs text-slate-400">${group.date} &mdash; ${reporter}</span>
+                            <div class="font-medium">${locations}</div>
+                            <div class="text-xs text-slate-400">${group.entries.map(entry => formatDetails(entry)).join('<br>')}</div>
                         </div>
-                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(group.entry_type)}</span>
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         async function loadAdminData() {
