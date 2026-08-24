@@ -72,7 +72,6 @@
                 <div class="flex items-center gap-2">
                     <span id="userName" class="text-sm text-slate-400 hidden sm:inline"></span>
                     <button onclick="showSection('dashboard')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Dashboard"><i class="fas fa-home"></i></button>
-                    <button onclick="showSection('myReports')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Raporlarim"><i class="fas fa-list"></i></button>
                     <button id="adminBtn" onclick="showSection('admin')" class="p-2 rounded-lg hover:bg-slate-700 transition hidden" title="Admin Panel"><i class="fas fa-shield-alt text-yellow-500"></i></button>
                     <button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-red-900/30 text-red-400 transition" title="Cikis"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
@@ -101,7 +100,6 @@
                             <h4 class="font-semibold mb-3 text-slate-300">Hizli Erisim</h4>
                             <div class="space-y-2">
                                 <a href="form.html" target="_blank" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-external-link-alt mr-2 text-green-400"></i>Public Form Portali</a>
-                                <button onclick="showSection('myReports')" class="block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-list mr-2 text-blue-400"></i>Raporlarim</button>
                                 <button onclick="showSection('admin')" id="dashAdminBtn" class="hidden block w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-center transition"><i class="fas fa-shield-alt mr-2 text-yellow-400"></i>Admin Paneli</button>
                             </div>
                         </div>
@@ -115,21 +113,6 @@
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div id="myReportsSection" class="hidden fade-in">
-                <div class="glass rounded-xl p-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        <h2 class="text-xl font-bold"><i class="fas fa-list mr-2 text-green-400"></i>Raporlarim</h2>
-                        <div class="flex gap-2">
-                            <input type="date" id="filterDate" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
-                            <select id="filterType" onchange="loadMyReports()" class="input-dark px-3 py-2 rounded-lg text-sm">
-                                <option value="">Tumu</option><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="myReportsList" class="space-y-3"></div>
                 </div>
             </div>
 
@@ -219,6 +202,26 @@
                     </div>
                     <div id="loadersList" class="space-y-2 max-w-md border border-slate-700 rounded p-3"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="editEntryModal" class="hidden fixed inset-0 z-50 bg-black/70 p-4 overflow-y-auto">
+        <div class="glass rounded-xl p-6 w-full max-w-2xl mx-auto mt-8">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-xl font-bold"><i class="fas fa-pen mr-2 text-yellow-400"></i>Raporu Duzenle</h2>
+                <button type="button" onclick="closeEditEntry()" class="text-slate-400 hover:text-white text-xl" title="Kapat"><i class="fas fa-times"></i></button>
+            </div>
+            <input type="hidden" id="editEntryId">
+            <div class="grid sm:grid-cols-3 gap-4 mb-4">
+                <div><label class="block text-sm text-slate-400 mb-1">Tarih</label><input type="date" id="editEntryDate" class="input-dark w-full px-3 py-2 rounded-lg"></div>
+                <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="editEntryLocation" class="input-dark w-full px-3 py-2 rounded-lg"></select></div>
+                <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="editEntryType" class="input-dark w-full px-3 py-2 rounded-lg"><option value="drilling">Sondaj</option><option value="material">Malzeme</option><option value="ore">Cevher/Pasa</option><option value="loder">Loder</option></select></div>
+            </div>
+            <div><label class="block text-sm text-slate-400 mb-1">Rapor Detayları</label><textarea id="editEntryDetails" rows="12" class="input-dark w-full px-3 py-2 rounded-lg font-mono text-sm"></textarea></div>
+            <div class="flex justify-end gap-3 mt-5">
+                <button type="button" onclick="closeEditEntry()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm">Iptal</button>
+                <button type="button" onclick="saveEditedEntry()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-save mr-1"></i>Kaydet</button>
             </div>
         </div>
     </div>
@@ -331,9 +334,8 @@
         });
 
         function showSection(section) {
-            ['dashboard', 'myReports', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
+            ['dashboard', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
             document.getElementById(section + 'Section').classList.remove('hidden');
-            if (section === 'myReports') loadMyReports();
             if (section === 'admin') {
                 loadAdminData(); loadCategoriesList(); loadLocationsList(); loadLoadersList();
                 const select = document.getElementById('materialCategorySelect');
@@ -376,30 +378,6 @@
             `).join('');
         }
 
-        async function loadMyReports() {
-            const date = document.getElementById('filterDate').value;
-            const type = document.getElementById('filterType').value;
-            let query = db.from('entries').select('*').eq('user_id', currentUser.id).order('date', { ascending: false });
-            if (date) query = query.eq('date', date);
-            if (type) query = query.eq('entry_type', type);
-            const { data } = await query;
-            const container = document.getElementById('myReportsList');
-            if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-8">Kayit bulunamadi</p>'; return; }
-            container.innerHTML = data.map(e => `
-                <div class="glass rounded-lg p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <span class="text-xs px-2 py-0.5 rounded bg-slate-700">${getTypeLabel(e.entry_type)}</span>
-                            <span class="text-sm text-slate-400">${e.date}</span>
-                        </div>
-                        <div class="font-semibold text-lg">${e.location}</div>
-                        <div class="text-sm text-slate-300">${formatDetails(e)}</div>
-                    </div>
-                    <button onclick="deleteEntry('${e.id}')" class="btn-danger px-4 py-2 rounded-lg text-sm"><i class="fas fa-trash"></i></button>
-                </div>
-            `).join('');
-        }
-
         async function loadAdminData() {
             if (!isAdmin) return;
             const startDate = document.getElementById('adminStartDate').value;
@@ -432,7 +410,7 @@
                     <td class="py-3 px-2 font-medium">${e.location}</td>
                     <td class="py-3 px-2 text-slate-300">${formatDetails(e)}</td>
                     <td class="py-3 px-2 text-xs text-slate-400">${e.profiles && e.profiles.full_name ? e.profiles.full_name : 'Anonim'}</td>
-                    <td class="py-3 px-2 text-right"><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fas fa-trash"></i></button></td>
+                    <td class="py-3 px-2 text-right whitespace-nowrap"><button onclick="openEditEntry('${e.id}')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('');
             const summary = { drilling: 0, material: 0, ore: 0, loder: 0 };
@@ -455,10 +433,54 @@
             document.getElementById('adminSearch').value = '';
             loadAdminData();
         }
+        function populateEditLocationOptions(selectedLocation) {
+            const select = document.getElementById('editEntryLocation');
+            select.innerHTML = '';
+            locations.forEach(location => {
+                const option = document.createElement('option');
+                option.value = location.name;
+                option.textContent = location.name;
+                select.appendChild(option);
+            });
+            if (selectedLocation && !locations.some(location => location.name === selectedLocation)) {
+                const option = document.createElement('option');
+                option.value = selectedLocation;
+                option.textContent = selectedLocation;
+                select.appendChild(option);
+            }
+            select.value = selectedLocation || '';
+        }
+        function openEditEntry(id) {
+            const entry = currentAdminData.find(item => item.id === id);
+            if (!entry) return alert('Rapor bulunamadi.');
+            document.getElementById('editEntryId').value = entry.id;
+            document.getElementById('editEntryDate').value = entry.date;
+            document.getElementById('editEntryType').value = entry.entry_type;
+            populateEditLocationOptions(entry.location);
+            document.getElementById('editEntryDetails').value = JSON.stringify(entry.details || {}, null, 2);
+            document.getElementById('editEntryModal').classList.remove('hidden');
+        }
+        function closeEditEntry() { document.getElementById('editEntryModal').classList.add('hidden'); }
+        async function saveEditedEntry() {
+            const id = document.getElementById('editEntryId').value;
+            const date = document.getElementById('editEntryDate').value;
+            const location = document.getElementById('editEntryLocation').value;
+            const entryType = document.getElementById('editEntryType').value;
+            if (!date || !location || !entryType) return alert('Tarih, lokasyon ve tip zorunludur.');
+            let details;
+            try { details = JSON.parse(document.getElementById('editEntryDetails').value); }
+            catch (error) { return alert('Rapor detayları geçerli bir JSON formatında olmalıdır.'); }
+            const { error } = await db.from('entries').update({ date, location, entry_type: entryType, details }).eq('id', id);
+            if (error) return alert('Rapor güncellenemedi: ' + error.message);
+            closeEditEntry();
+            await loadAdminData();
+            loadTodayStats(); loadDashRecentEntries(); loadDashboardStats();
+            alert('Rapor güncellendi.');
+        }
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) { loadMyReports(); loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
+            if (!error) { loadAdminData(); loadTodayStats(); loadDashRecentEntries(); loadDashboardStats(); }
         }
 
         function destroyCharts() {
