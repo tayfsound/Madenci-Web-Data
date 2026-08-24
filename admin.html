@@ -639,8 +639,29 @@
         function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
         function formatDetailsHtml(entry) {
-            const details = formatDetails(entry).split(' | ');
-            return details.map(detail => '<div>' + detail + '</div>').join('');
+            const d = entry.details || {};
+            let details;
+            if (entry.entry_type === 'ore') {
+                details = [oreTypeLabel(d.type) + ': ' + d.quantity, 'Yön: ' + (d.direction === 'iceri' ? 'İçeri' : 'Dışarı')];
+                if (d.shift) details.push('Vardiya: ' + shiftLabel(d.shift));
+            } else if (entry.entry_type === 'drilling' && String(d.drilling_type || '').toLocaleLowerCase('tr-TR') === 'tavan') {
+                details = (Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik') : []);
+                if (d.total_meters) details.push('Toplam: ' + d.total_meters + ' m');
+            } else if (entry.entry_type === 'drilling' && String(d.drilling_type || '').toLocaleLowerCase('tr-TR') === 'ayna') {
+                details = [];
+                if (d.material_type) details.push(d.material_type === 'cevher' ? 'Cevher' : 'Patar');
+                if (Array.isArray(d.explosives)) d.explosives.forEach(item => details.push(item.name + ': ' + item.quantity));
+            } else if (entry.entry_type === 'material') {
+                details = ['Malzeme: ' + d.name, 'Miktar: ' + d.quantity + ' ' + d.unit, 'Kategori: ' + d.category];
+            } else if (entry.entry_type === 'loder') {
+                details = ['Kepçe: ' + d.loader, 'Çalışma saati: ' + d.hours];
+                if (d.cevher_kovasi && d.cevher_kovasi !== '0') details.push('Cevher: ' + d.cevher_kovasi + ' kova');
+                if (d.pasa_kovasi && d.pasa_kovasi !== '0') details.push('Pasa: ' + d.pasa_kovasi + ' kova');
+                if (d.shift) details.push('Vardiya: ' + shiftLabel(d.shift));
+            } else {
+                details = formatDetails(entry).split(' | ');
+            }
+            return details.filter(Boolean).map(detail => '<div class="detail-line">' + detail + '</div>').join('');
         }
         function formatDetails(entry) {
             const d = entry.details;
