@@ -41,10 +41,10 @@
             .responsive-table td { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.35rem 0.5rem; white-space: normal; overflow-wrap: anywhere; }
             .responsive-table td::before { flex: 0 0 5.5rem; color: #94a3b8; font-size: 0.75rem; }
             .responsive-table td:nth-child(1)::before { content: 'Tarih'; }
-            .responsive-table td:nth-child(2)::before { content: 'Tip'; }
-            .responsive-table td:nth-child(3)::before { content: 'Alan'; }
-            .responsive-table td:nth-child(4)::before { content: 'Detay'; }
-            .responsive-table td:nth-child(5)::before { content: 'İsim'; }
+            .responsive-table td:nth-child(2)::before { content: 'İsim'; }
+            .responsive-table td:nth-child(3)::before { content: 'Tip'; }
+            .responsive-table td:nth-child(4)::before { content: 'Alan'; }
+            .responsive-table td:nth-child(5)::before { content: 'Detay'; }
             .responsive-table td:nth-child(6)::before { content: 'İşlem'; }
             .responsive-table td:nth-child(4) { line-height: 1.45; }
             .responsive-table td:nth-child(6) { justify-content: flex-end; }
@@ -124,7 +124,7 @@
                             <div class="overflow-x-auto">
                                 <table class="responsive-table w-full text-sm">
                                     <thead class="border-b border-slate-700 text-slate-400">
-                                        <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-right py-3 px-2">İşlem</th></tr>
+                                        <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Çalışma Alanı</th><th class="text-left py-3 px-2">Detay</th><th class="text-right py-3 px-2">İşlem</th></tr>
                                     </thead>
                                     <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
                                 </table>
@@ -453,16 +453,21 @@
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">Kayit bulunamadi</td></tr>';
                 return;
             }
-            tbody.innerHTML = filtered.map(e => `
-                <tr class="hover:bg-slate-800/50">
-                    <td class="py-3 px-2 whitespace-nowrap">${e.date}</td>
-                    <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(e.entry_type)}</span></td>
-                    <td class="py-3 px-2 font-medium">${e.location}</td>
-                    <td class="py-3 px-2 text-slate-300">${formatDetails(e)}</td>
-                    <td class="py-3 px-2 text-xs text-slate-400">${getReporterName(e)}</td>
-                    <td class="py-3 px-2 text-right whitespace-nowrap"><button onclick="openEditEntry('${e.id}')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button></td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = groupReportEntries(filtered).map(group => {
+                const firstEntry = group.entries[0];
+                const locations = [...new Set(group.entries.map(entry => entry.location))].join(', ');
+                const actions = group.entries.map(entry => '<button onclick="openEditEntry(\'' + entry.id + '\')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry(\'' + entry.id + '\')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button>').join('');
+                return `
+                    <tr class="hover:bg-slate-800/50">
+                        <td class="py-3 px-2 whitespace-nowrap">${group.date}</td>
+                        <td class="py-3 px-2 text-sm text-slate-300">${getReporterName(firstEntry)}</td>
+                        <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(group.entry_type)}</span></td>
+                        <td class="py-3 px-2 font-medium">${locations}</td>
+                        <td class="py-3 px-2 text-slate-300">${group.entries.map(entry => formatDetails(entry)).join('<br>')}</td>
+                        <td class="py-3 px-2 text-right whitespace-nowrap">${actions}</td>
+                    </tr>
+                `;
+            }).join('');
         }
         function applyAdminFilters() { loadAdminData(); }
         function clearAdminFilters() {
@@ -593,6 +598,21 @@
             if (details.first_name && details.last_name) return details.first_name + ' ' + details.last_name;
             if (entry.profiles && entry.profiles.full_name) return entry.profiles.full_name;
             return 'İsim bilgisi yok';
+        }
+        function groupReportEntries(entries) {
+            const groups = [];
+            const groupsByKey = {};
+            entries.forEach(entry => {
+                const details = entry.details || {};
+                const reporter = getReporterName(entry);
+                const key = details.submission_id || entry.date + '|' + entry.entry_type + '|' + reporter;
+                if (!groupsByKey[key]) {
+                    groupsByKey[key] = { date: entry.date, entry_type: entry.entry_type, entries: [] };
+                    groups.push(groupsByKey[key]);
+                }
+                groupsByKey[key].entries.push(entry);
+            });
+            return groups;
         }
         function getTypeLabel(type) { return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder' }[type] || type; }
         function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
