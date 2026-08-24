@@ -108,7 +108,6 @@
                                     <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
                                 </table>
                             </div>
-                            <div id="adminSummary" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
                         </div>
                     </div>
                 </div>
@@ -431,7 +430,6 @@
             const tbody = document.getElementById('adminTableBody');
             if (!filtered.length) {
                 tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-500">Kayit bulunamadi</td></tr>';
-                document.getElementById('adminSummary').innerHTML = '';
                 return;
             }
             tbody.innerHTML = filtered.map(e => `
@@ -444,14 +442,6 @@
                     <td class="py-3 px-2 text-right whitespace-nowrap"><button onclick="openEditEntry('${e.id}')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry('${e.id}')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('');
-            const summary = { drilling: 0, material: 0, ore: 0, loder: 0 };
-            filtered.forEach(e => summary[e.entry_type]++);
-            document.getElementById('adminSummary').innerHTML = `
-                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.drilling}</div><div class="text-xs text-slate-400">Sondaj</div></div>
-                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.material}</div><div class="text-xs text-slate-400">Malzeme</div></div>
-                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.ore}</div><div class="text-xs text-slate-400">Cevher/Pasa</div></div>
-                <div class="glass rounded-lg p-4 text-center"><div class="text-2xl font-bold text-green-400">${summary.loder}</div><div class="text-xs text-slate-400">Loder</div></div>
-            `;
         }
         function applyAdminFilters() { loadAdminData(); }
         function clearAdminFilters() {
