@@ -29,6 +29,27 @@
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         .btn-outline { border: 1px solid #334155; background: transparent; }
         .btn-outline:hover { background: #334155; }
+        html, body { overflow-x: hidden; }
+        @media (max-width: 640px) {
+            #dashboardStats > div { min-width: 0; }
+            #dashboardStats table { width: 100%; table-layout: fixed; }
+            #dashboardStats th, #dashboardStats td { overflow-wrap: anywhere; }
+            .responsive-table thead { display: none; }
+            .responsive-table, .responsive-table tbody, .responsive-table tr, .responsive-table td { display: block; width: 100%; }
+            .responsive-table tr { padding: 0.75rem 0; border-bottom: 1px solid rgba(51, 65, 85, 0.6); }
+            .responsive-table tr:last-child { border-bottom: 0; }
+            .responsive-table td { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.35rem 0.5rem; white-space: normal; overflow-wrap: anywhere; }
+            .responsive-table td::before { flex: 0 0 5.5rem; color: #94a3b8; font-size: 0.75rem; }
+            .responsive-table td:nth-child(1)::before { content: 'Tarih'; }
+            .responsive-table td:nth-child(2)::before { content: 'Tip'; }
+            .responsive-table td:nth-child(3)::before { content: 'Alan'; }
+            .responsive-table td:nth-child(4)::before { content: 'Detay'; }
+            .responsive-table td:nth-child(5)::before { content: 'İsim'; }
+            .responsive-table td:nth-child(6)::before { content: 'İşlem'; }
+            .responsive-table td:nth-child(4) { line-height: 1.45; }
+            .responsive-table td:nth-child(6) { justify-content: flex-end; }
+            .responsive-table td:nth-child(6)::before { margin-right: auto; }
+        }
     </style>
 <base target="_blank">
 </head>
@@ -101,7 +122,7 @@
                                 </div>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full text-sm">
+                                <table class="responsive-table w-full text-sm">
                                     <thead class="border-b border-slate-700 text-slate-400">
                                         <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-right py-3 px-2">İşlem</th></tr>
                                     </thead>
