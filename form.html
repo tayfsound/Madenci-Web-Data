@@ -189,7 +189,10 @@
         let categories = [];
         let materialsByCategory = {};
         let locations = [];
-        let drillingTypes = [];
+        let drillingTypes = [
+            { id: '00000000-0000-4000-8000-000000000001', name: 'Ayna', fields: [] },
+            { id: '00000000-0000-4000-8000-000000000002', name: 'Tavan', fields: [] }
+        ];
         let loaders = [];
 
         function getTodayDate() {
@@ -256,6 +259,7 @@
                 document.querySelectorAll('.o-location').forEach(select => fillOreLocationSelect(select));
                 document.querySelectorAll('.ld-location').forEach(select => fillOreLocationSelect(select));
             }
+            if (document.getElementById('d_type').value) renderDrillingFields();
         }
 
         function fillOreLocationSelect(select) {
@@ -331,6 +335,7 @@
         async function loadDrillingTypes() {
             const { data: types } = await db.from('drilling_types').select('*').order('name');
             const databaseTypes = types || [];
+            const selectedTypeName = document.getElementById('d_type').selectedOptions[0]?.textContent;
             drillingTypes = BUILTIN_DRILLING_TYPES.map(builtinType => databaseTypes.find(type => type.name.toLocaleLowerCase('tr-TR') === builtinType.name.toLocaleLowerCase('tr-TR')) || builtinType);
             databaseTypes.forEach(type => {
                 if (!drillingTypes.some(existingType => existingType.name.toLocaleLowerCase('tr-TR') === type.name.toLocaleLowerCase('tr-TR'))) drillingTypes.push(type);
@@ -338,6 +343,10 @@
             const sel = document.getElementById('d_type');
             sel.innerHTML = '<option value="">Sec</option>';
             drillingTypes.forEach(t => { const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; sel.appendChild(o); });
+            if (selectedTypeName) {
+                const selectedType = drillingTypes.find(type => type.name === selectedTypeName);
+                if (selectedType) sel.value = selectedType.id;
+            }
             renderDrillingFields();
         }
 
