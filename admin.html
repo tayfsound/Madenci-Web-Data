@@ -461,7 +461,7 @@
                     <tr class="hover:bg-slate-800/50">
                         <td class="py-3 px-2 whitespace-nowrap">${group.date}</td>
                         <td class="py-3 px-2 text-sm text-slate-300">${getReporterName(firstEntry)}</td>
-                        <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getTypeLabel(group.entry_type)}</span></td>
+                        <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getReportTypeLabel(firstEntry)}</span></td>
                         <td class="py-3 px-2 font-medium">${locations}</td>
                         <td class="py-3 px-2 text-slate-300">${group.entries.map(entry => formatDetails(entry)).join('<br>')}</td>
                         <td class="py-3 px-2 text-right whitespace-nowrap">${actions}</td>
@@ -580,7 +580,7 @@
         function exportExcel() {
             if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
             const ws = XLSX.utils.json_to_sheet(currentAdminData.map(e => ({
-                'Tarih': e.date, 'Tip': getTypeLabel(e.entry_type), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'İsim Soyisim': getReporterName(e)
+                'Tarih': e.date, 'Tip': getReportTypeLabel(e), 'Lokasyon': e.location, 'Detay': formatDetails(e), 'İsim Soyisim': getReporterName(e)
             })));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Raporlar');
@@ -593,7 +593,7 @@
             doc.text('Gunluk Raporlar', 14, 15);
             doc.autoTable({
                 head: [['Tarih', 'Tip', 'Lokasyon', 'Detay', 'İsim Soyisim']],
-                body: currentAdminData.map(e => [e.date, getTypeLabel(e.entry_type), e.location, formatDetails(e), getReporterName(e)]),
+                body: currentAdminData.map(e => [e.date, getReportTypeLabel(e), e.location, formatDetails(e), getReporterName(e)]),
                 startY: 20, styles: { fontSize: 8 }
             });
             doc.save('raporlar_' + new Date().toISOString().split('T')[0] + '.pdf');
@@ -621,6 +621,10 @@
             return groups;
         }
         function getTypeLabel(type) { return { drilling: 'Sondaj', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder' }[type] || type; }
+        function getReportTypeLabel(entry) {
+            if (entry.entry_type === 'drilling' && entry.details && entry.details.drilling_type) return entry.details.drilling_type;
+            return getTypeLabel(entry.entry_type);
+        }
         function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
         function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
