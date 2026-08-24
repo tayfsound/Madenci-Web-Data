@@ -103,7 +103,7 @@
 
             <div id="dashboardSection" class="fade-in">
                 <div class="grid lg:grid-cols-3 gap-6">
-                    <div class="lg:col-span-2 space-y-6">
+                    <div class="w-full space-y-6">
                         <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
                         <div class="glass rounded-xl p-5">
                             <h4 class="font-semibold mb-3 text-slate-300">Hizli Erisim</h4>
@@ -113,7 +113,7 @@
                             </div>
                         </div>
                         <div id="dashboardStats" class="space-y-4"></div>
-                        <div class="glass rounded-xl p-6">
+                        <div class="glass rounded-xl p-4 sm:p-6 min-w-0">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                                 <h2 class="text-xl font-bold"><i class="fas fa-table mr-2 text-green-400"></i>Kayıtlar</h2>
                                 <div class="flex gap-2">
@@ -121,8 +121,8 @@
                                     <button onclick="exportPDF()" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
                                 </div>
                             </div>
-                            <div class="overflow-x-auto">
-                                <table class="responsive-table w-full text-sm">
+                            <div class="w-full min-w-0">
+                                <table class="responsive-table w-full text-sm table-fixed">
                                     <thead class="border-b border-slate-700 text-slate-400">
                                         <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Çalışma Alanı</th><th class="text-left py-3 px-2">Detay</th><th class="text-right py-3 px-2">İşlem</th></tr>
                                     </thead>
@@ -456,7 +456,7 @@
             tbody.innerHTML = groupReportEntries(filtered).map(group => {
                 const firstEntry = group.entries[0];
                 const locations = [...new Set(group.entries.map(entry => entry.location))].join(', ');
-                const actions = group.entries.map(entry => '<button onclick="openEditEntry(\'' + entry.id + '\')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteEntry(\'' + entry.id + '\')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button>').join('');
+                const actions = '<button onclick="openEditEntry(\'' + firstEntry.id + '\')" class="text-yellow-400 hover:text-yellow-300 px-2" title="Duzenle"><i class="fas fa-pen"></i></button><button onclick="deleteReportGroup(\'' + group.entries.map(entry => entry.id).join(',') + '\')" class="text-red-400 hover:text-red-300 px-2" title="Sil"><i class="fas fa-trash"></i></button>';
                 return `
                     <tr class="hover:bg-slate-800/50">
                         <td class="py-3 px-2 whitespace-nowrap">${group.date}</td>
@@ -570,6 +570,12 @@
             const { error } = await db.from('entries').delete().eq('id', id);
             if (!error) { loadAdminData(); loadDashboardStats(); }
         }
+        async function deleteReportGroup(ids) {
+            if (!confirm('Bu raporun tüm parçaları silinsin mi?')) return;
+            const { error } = await db.from('entries').delete().in('id', ids.split(','));
+            if (error) return alert('Rapor silinemedi: ' + error.message);
+            loadAdminData(); loadDashboardStats();
+        }
 
         function exportExcel() {
             if (!currentAdminData.length) return alert('Disa aktarilacak veri yok');
@@ -604,8 +610,7 @@
             const groupsByKey = {};
             entries.forEach(entry => {
                 const details = entry.details || {};
-                const reporter = getReporterName(entry);
-                const key = details.submission_id || entry.date + '|' + entry.entry_type + '|' + reporter;
+                const key = details.submission_id || entry.id;
                 if (!groupsByKey[key]) {
                     groupsByKey[key] = { date: entry.date, entry_type: entry.entry_type, entries: [] };
                     groups.push(groupsByKey[key]);
@@ -620,17 +625,16 @@
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
         function formatDetails(entry) {
             const d = entry.details;
-            const reporter = d.first_name && d.last_name ? d.first_name + ' ' + d.last_name : '';
             if (entry.entry_type === 'drilling') {
                 if (!d.drilling_type) return d.meter + 'm | Sira ' + d.row + ' | ' + d.holes;
                 const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'ayna') {
                     const explosives = Array.isArray(d.explosives) ? d.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : '';
-                    return [reporter, d.drilling_type, d.material_type ? (d.material_type === 'cevher' ? 'Cevher' : 'Patar') : '', explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | ');
+                    return [d.drilling_type, d.material_type ? (d.material_type === 'cevher' ? 'Cevher' : 'Patar') : '', explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | ');
                 }
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const holes = Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik').join(', ') : '';
-                    return [reporter, d.drilling_type, holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : ''].filter(Boolean).join(' | ');
+                    return [d.drilling_type, holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : ''].filter(Boolean).join(' | ');
                 }
                 let alanlar = [];
                 if (tip && Array.isArray(tip.fields)) {
@@ -638,20 +642,20 @@
                         alanlar = tip.fields.map(key => { const legacy = LEGACY_FIELD_LABELS[key] || { label: key, type: 'text' }; return { key, label: legacy.label }; });
                     } else { alanlar = tip.fields.map(f => ({ key: f.key, label: f.label })); }
                 } else { alanlar = Object.keys(d).filter(k => k !== 'drilling_type_id' && k !== 'drilling_type').map(k => ({ key: k, label: LEGACY_FIELD_LABELS[k] ? LEGACY_FIELD_LABELS[k].label : k })); }
-                const parcalar = [reporter, d.drilling_type];
+                const parcalar = [d.drilling_type];
                 alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
                 return parcalar.join(' | ');
             }
-            if (entry.entry_type === 'material') return [reporter, d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category].filter(Boolean).join(' | ');
+            if (entry.entry_type === 'material') return d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category;
             if (entry.entry_type === 'loder') {
                 let sonuc = 'Kepce ' + d.loader + ' | ' + d.hours + ' saat';
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc += ' | Cevher: ' + d.cevher_kovasi + ' kova';
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc += ' | Pasa: ' + d.pasa_kovasi + ' kova';
                 if (d.shift) sonuc += ' | ' + shiftLabel(d.shift);
-                return [reporter, sonuc].filter(Boolean).join(' | ');
+                return sonuc;
             }
-            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [reporter, oreTypeLabel(d.type) + ' ' + d.quantity + ' ' + yon + ' | ' + (d.shift ? shiftLabel(d.shift) : '')].filter(Boolean).join(' | '); }
-            return [reporter, JSON.stringify(d)].filter(Boolean).join(' | ');
+            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return oreTypeLabel(d.type) + ' ' + d.quantity + ' ' + yon + ' | ' + (d.shift ? shiftLabel(d.shift) : ''); }
+            return JSON.stringify(d);
         }
 
         function RLS_DELETE_UYARISI(tablo) {
