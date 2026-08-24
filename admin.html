@@ -85,9 +85,23 @@
                     <div class="lg:col-span-2 space-y-6">
                         <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
                         <div id="dashboardStats" class="space-y-4"></div>
-                        <div class="glass rounded-xl p-5">
-                            <h4 class="font-semibold mb-3 text-slate-300">Son Kayitlar (Tumu)</h4>
-                            <div id="dashRecentEntries" class="space-y-2 max-h-96 overflow-y-auto text-sm"><p class="text-slate-500 text-center py-4">Kayit yok</p></div>
+                        <div class="glass rounded-xl p-6">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                                <h2 class="text-xl font-bold"><i class="fas fa-table mr-2 text-green-400"></i>Kayıtlar</h2>
+                                <div class="flex gap-2">
+                                    <button onclick="exportExcel()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium"><i class="fas fa-file-excel mr-1"></i>Excel</button>
+                                    <button onclick="exportPDF()" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="border-b border-slate-700 text-slate-400">
+                                        <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-right py-3 px-2">İşlem</th></tr>
+                                    </thead>
+                                    <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
+                                </table>
+                            </div>
+                            <div id="adminSummary" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
                         </div>
                     </div>
                     <div class="space-y-4">
@@ -118,25 +132,6 @@
                             <button onclick="clearAdminFilters()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium"><i class="fas fa-undo mr-1"></i>Temizle</button>
                         </div>
                     </div>
-                </div>
-
-                <div class="glass rounded-xl p-6">
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                        <h2 class="text-xl font-bold"><i class="fas fa-table mr-2 text-green-400"></i>Kayitlar</h2>
-                        <div class="flex gap-2">
-                            <button onclick="exportExcel()" class="px-4 py-2 rounded-lg bg-green-700 hover:bg-green-600 text-sm font-medium"><i class="fas fa-file-excel mr-1"></i>Excel</button>
-                            <button onclick="exportPDF()" class="px-4 py-2 rounded-lg bg-red-700 hover:bg-red-600 text-sm font-medium"><i class="fas fa-file-pdf mr-1"></i>PDF</button>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="border-b border-slate-700 text-slate-400">
-                                <tr><th class="text-left py-3 px-2">Tarih</th><th class="text-left py-3 px-2">Tip</th><th class="text-left py-3 px-2">Lokasyon</th><th class="text-left py-3 px-2">Detay</th><th class="text-left py-3 px-2">İsim Soyisim</th><th class="text-right py-3 px-2">İşlem</th></tr>
-                            </thead>
-                            <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
-                        </table>
-                    </div>
-                    <div id="adminSummary" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
                 </div>
 
                 <div class="glass rounded-xl p-6 mt-6">
@@ -344,7 +339,8 @@
                 await loadLoaders();
                 const today = new Date().toISOString().split('T')[0];
                 document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
-                loadDashboardStats(); loadDashRecentEntries();
+                loadDashboardStats();
+                if (isAdmin) loadAdminData();
             }
         }
         db.auth.onAuthStateChange((event, session) => {
@@ -413,41 +409,6 @@
             if (error) { document.getElementById('dashboardStats').innerHTML = '<p class="text-red-400 text-sm">İstatistikler yüklenemedi: ' + error.message + '</p>'; return; }
             renderDashboardStats(periods.map(period => ({ ...period, stats: calculateDashboardStats(data || [], period.start) })));
         }
-        async function loadDashRecentEntries() {
-            const { data } = await db.from('entries').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(50);
-            const container = document.getElementById('dashRecentEntries');
-            if (!data || !data.length) { container.innerHTML = '<p class="text-slate-500 text-center py-4">Kayit yok</p>'; return; }
-            const groups = [];
-            const groupsByKey = {};
-            data.forEach(entry => {
-                const details = entry.details || {};
-                const key = details.submission_id || entry.id;
-                if (!groupsByKey[key]) {
-                    groupsByKey[key] = { date: entry.date, entry_type: entry.entry_type, entries: [], profile: entry.profiles };
-                    groups.push(groupsByKey[key]);
-                }
-                groupsByKey[key].entries.push(entry);
-            });
-            container.innerHTML = groups.slice(0, 10).map(group => {
-                const firstEntry = group.entries[0];
-                const details = firstEntry.details || {};
-                const reporter = getReporterName(firstEntry);
-                const locations = [...new Set(group.entries.map(entry => entry.location))].join(', ');
-                return `
-                <div class="entry-card p-3 rounded-lg bg-slate-800/50 border-l-4 ${getBorderColor(group.entry_type)}">
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <span class="text-xs text-slate-400">${group.date} &mdash; ${reporter}</span>
-                            <div class="font-medium">${locations}</div>
-                            <div class="text-xs text-slate-400">${group.entries.map(entry => formatDetails(entry)).join('<br>')}</div>
-                        </div>
-                        <span class="text-xs px-2 py-1 rounded bg-slate-700">${getTypeLabel(group.entry_type)}</span>
-                    </div>
-                </div>
-            `;
-            }).join('');
-        }
-
         async function loadAdminData() {
             if (!isAdmin) return;
             const startDate = document.getElementById('adminStartDate').value;
@@ -587,13 +548,13 @@
             if (error) return alert('Rapor güncellenemedi: ' + error.message);
             closeEditEntry();
             await loadAdminData();
-            loadDashboardStats(); loadDashRecentEntries();
+            loadDashboardStats();
             alert('Rapor güncellendi.');
         }
         async function deleteEntry(id) {
             if (!confirm('Silmek istediginize emin misiniz?')) return;
             const { error } = await db.from('entries').delete().eq('id', id);
-            if (!error) { loadAdminData(); loadDashboardStats(); loadDashRecentEntries(); }
+            if (!error) { loadAdminData(); loadDashboardStats(); }
         }
 
         function exportExcel() {
