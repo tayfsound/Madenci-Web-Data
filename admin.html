@@ -41,6 +41,16 @@
         html, body { overflow-x: hidden; }
         #editEntryModal { overscroll-behavior: contain; }
         #editEntryModal > div { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+        /* Legacy dark utility classes must remain readable with the light admin theme. */
+        #appScreen .bg-slate-800 { background-color: #f1f5f9 !important; color: #334155 !important; }
+        #appScreen .bg-slate-800\/50 { background-color: #f8fafc !important; color: #334155 !important; }
+        #appScreen .bg-slate-700 { background-color: #e2e8f0 !important; color: #334155 !important; }
+        #appScreen .divide-slate-800 > * { border-color: #e5e7eb !important; }
+        #appScreen .border-slate-700, #appScreen .border-slate-700\/50 { border-color: #e2e8f0 !important; }
+        #appScreen .text-slate-300 { color: #475569 !important; }
+        #appScreen .text-slate-400 { color: #64748b !important; }
+        #appScreen .text-slate-500 { color: #64748b !important; }
+        #appScreen .hover\:bg-slate-700:hover { background-color: #e2e8f0 !important; }
         @media (max-width: 900px) {
             #dashboardStats > div { min-width: 0; }
             #dashboardStats table { width: 100%; table-layout: fixed; }
@@ -118,7 +128,7 @@
         <div class="max-w-7xl mx-auto px-4 py-6">
 
             <div id="dashboardSection" class="fade-in">
-                <div class="grid lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 gap-6">
                     <div class="w-full space-y-6">
                         <h2 class="text-xl font-bold"><i class="fas fa-chart-line mr-2 text-green-400"></i>Dashboard</h2>
                         <div class="glass rounded-xl p-5">
