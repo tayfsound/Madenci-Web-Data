@@ -12,20 +12,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f6f7f9; color: #17202a; }
-        .glass { background: #fff; border: 1px solid #e5e7eb; box-shadow: 0 8px 24px rgba(15,23,42,.06); }
-        .input-dark { background: #fff; border: 1px solid #d7dce2; color: #17202a; }
-        .input-dark:focus { outline: none; border-color: #64748b; box-shadow: 0 0 0 3px rgba(100,116,139,.12); }
-        .btn-primary, .btn-success { background: #334155; color: #fff; }
-        .btn-danger { background: #b91c1c; color: #fff; }
-        .tab-active { border-bottom: 2px solid #334155; color: #334155; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+        .input-dark { background: #1e293b; border: 1px solid #334155; color: white; font-size: 16px; }
+        .input-dark:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+        .btn-primary, .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+        .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; }
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .entry-card { transition: all 0.2s; }
         .entry-card:hover { transform: translateX(4px); border-left-color: #3b82f6; }
         ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         .btn-outline { border: 1px solid #334155; background: transparent; }
         .btn-outline:hover { background: #334155; }
         .responsive-table { table-layout: auto; }
@@ -41,16 +41,12 @@
         html, body { overflow-x: hidden; }
         #editEntryModal { overscroll-behavior: contain; }
         #editEntryModal > div { max-height: calc(100dvh - 2rem); overflow-y: auto; }
-        /* Legacy dark utility classes must remain readable with the light admin theme. */
-        #appScreen .bg-slate-800 { background-color: #f1f5f9 !important; color: #334155 !important; }
-        #appScreen .bg-slate-800\/50 { background-color: #f8fafc !important; color: #334155 !important; }
-        #appScreen .bg-slate-700 { background-color: #e2e8f0 !important; color: #334155 !important; }
-        #appScreen .divide-slate-800 > * { border-color: #e5e7eb !important; }
-        #appScreen .border-slate-700, #appScreen .border-slate-700\/50 { border-color: #e2e8f0 !important; }
-        #appScreen .text-slate-300 { color: #475569 !important; }
-        #appScreen .text-slate-400 { color: #64748b !important; }
-        #appScreen .text-slate-500 { color: #64748b !important; }
-        #appScreen .hover\:bg-slate-700:hover { background-color: #e2e8f0 !important; }
+        /* Keep report rows readable while preserving the same dark surface language as the form. */
+        #appScreen .bg-slate-800 { background-color: #1e293b !important; color: #e2e8f0 !important; }
+        #appScreen .bg-slate-800\/50 { background-color: rgba(30,41,59,.5) !important; color: #e2e8f0 !important; }
+        #appScreen .bg-slate-700 { background-color: #334155 !important; color: #f8fafc !important; }
+        #appScreen .divide-slate-800 > * { border-color: #334155 !important; }
+        #appScreen .hover\:bg-slate-700:hover { background-color: #334155 !important; }
         @media (max-width: 900px) {
             #dashboardStats > div { min-width: 0; }
             #dashboardStats table { width: 100%; table-layout: fixed; }
