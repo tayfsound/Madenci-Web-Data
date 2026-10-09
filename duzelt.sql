@@ -25,6 +25,33 @@ create policy locations_insert on public.locations
   for insert to authenticated
   with check (public.is_admin());
 
+-- Public form bu listeleri anonim kullanıcı olarak okuyabilmelidir.
+drop policy if exists locations_select on public.locations;
+drop policy if exists categories_select on public.categories;
+drop policy if exists materials_select on public.materials;
+drop policy if exists drilling_types_select on public.drilling_types;
+drop policy if exists loaders_select on public.loaders;
+
+create policy locations_select on public.locations
+  for select to anon, authenticated
+  using (true);
+
+create policy categories_select on public.categories
+  for select to anon, authenticated
+  using (true);
+
+create policy materials_select on public.materials
+  for select to anon, authenticated
+  using (true);
+
+create policy drilling_types_select on public.drilling_types
+  for select to anon, authenticated
+  using (true);
+
+create policy loaders_select on public.loaders
+  for select to anon, authenticated
+  using (true);
+
 -- 3) Üç tablo için silme politikaları — eksik olan asıl parça buydu
 drop policy if exists categories_delete on public.categories;
 drop policy if exists materials_delete  on public.materials;
