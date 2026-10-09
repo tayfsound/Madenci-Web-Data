@@ -526,12 +526,23 @@
         function renderAynaFields(container) {
             const explosiveCategory = categories.find(category => normalizeTurkishText(category.name).includes('patlay'));
             const explosives = explosiveCategory ? (materialsByCategory[explosiveCategory.id] || []) : [];
-            container.innerHTML = '<div class="col-span-2">' +
-                '<label class="block text-xs text-slate-400 mb-1.5">Cevher mi Patar mı?</label>' +
-                '<select id="d_ayna_materialType" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="cevher">Cevher</option><option value="patar">Patar</option></select>' +
-                '</div><div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div id="d_explosiveRows" class="space-y-2">' +
-                (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') +
-                '</div>';
+            container.innerHTML = '<div id="d_aynaRows" class="col-span-2 space-y-3"></div><button type="button" onclick="addAynaRow()" class="col-span-2 w-full py-2.5 rounded-xl border border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Ayna Raporu Ekle</button>';
+            container.dataset.explosives = JSON.stringify(explosives);
+            addAynaRow();
+        }
+
+        function addAynaRow() {
+            const container = document.getElementById('d_aynaRows'); if (!container) return;
+            const explosives = JSON.parse(document.getElementById('d_dynamicFields').dataset.explosives || '[]');
+            const row = document.createElement('div'); row.className = 'ayna-report-row rounded-xl border border-slate-700/70 border-l-4 border-l-yellow-500 p-3';
+            row.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="text-sm font-medium text-yellow-300">Ayna Raporu</label><button type="button" class="remove-ayna-row text-red-400 hover:text-red-300 text-sm" title="Raporu kaldır"><i class="fas fa-trash"></i></button></div><label class="block text-xs text-slate-400 mb-1.5">Malzeme tipi</label><select class="d-ayna-material-type input-dark w-full px-3 py-2.5 rounded-xl mb-3"><option value="">Seç</option><option value="cevher">Cevher</option><option value="patar">Pasa</option></select><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div class="d-ayna-explosives space-y-2">' + (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-ayna-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') + '</div>';
+            row.querySelector('.remove-ayna-row').addEventListener('click', () => { if (container.children.length > 1) { row.remove(); updateAynaRemoveButtons(); } });
+            container.appendChild(row); updateAynaRemoveButtons();
+        }
+
+        function updateAynaRemoveButtons() {
+            const rows = document.querySelectorAll('#d_aynaRows .ayna-report-row');
+            rows.forEach(row => row.querySelector('.remove-ayna-row').classList.toggle('invisible', rows.length === 1));
         }
 
         function renderTavanFields(container) {
@@ -639,12 +650,11 @@
                 data.location = document.getElementById('d_location').value;
                 data.details = { ...reporter, drilling_type_id: tip.id, drilling_type: tip.name };
                 if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
-                    const materialType = document.getElementById('d_ayna_materialType').value;
-                    const explosiveInputs = Array.from(document.querySelectorAll('.d-explosive-qty'));
-                    const explosives = explosiveInputs.filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
-                    if (!materialType) { alert('Cevher veya Patar seçin.'); return; }
-                    data.details.material_type = materialType;
-                    data.details.explosives = explosives;
+                    const reports = Array.from(document.querySelectorAll('#d_aynaRows .ayna-report-row')).map(row => ({ material_type: row.querySelector('.d-ayna-material-type').value, explosives: Array.from(row.querySelectorAll('.d-ayna-explosive-qty')).filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value })) }));
+                    if (!reports.length || reports.some(report => !report.material_type)) { alert('Her Ayna raporu için Cevher veya Pasa seçin.'); return; }
+                    data.details.ayna_reports = reports;
+                    data.details.material_type = reports[0].material_type;
+                    data.details.explosives = reports[0].explosives;
                 } else if (tip.name.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const rowInputs = Array.from(document.querySelectorAll('.d-tavan-row'));
                     const holeInputs = Array.from(document.querySelectorAll('.d-tavan-holes'));

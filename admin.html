@@ -501,10 +501,9 @@
                     const drillingType = String(details.drilling_type || '').toLocaleLowerCase('tr-TR');
                     if (drillingType === 'tavan') stats.meters += Number(details.total_meters) || 0;
                     if (drillingType === 'ayna') {
-                        stats.aynaReports += 1;
-                        if (details.material_type === 'cevher') stats.aynaOre += 1;
-                        if (details.material_type === 'patar') stats.aynaPatar += 1;
-                        if (Array.isArray(details.explosives)) stats.explosives += details.explosives.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+                        const reports = Array.isArray(details.ayna_reports) && details.ayna_reports.length ? details.ayna_reports : [{ material_type: details.material_type, explosives: details.explosives }];
+                        stats.aynaReports += reports.length;
+                        reports.forEach(report => { if (report.material_type === 'cevher') stats.aynaOre += 1; if (report.material_type === 'patar') stats.aynaPatar += 1; if (Array.isArray(report.explosives)) stats.explosives += report.explosives.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0); });
                     }
                 } else if (entry.entry_type === 'material' && details.name) {
                     stats.materials[details.name] = (stats.materials[details.name] || 0) + (Number(details.quantity) || 0);
@@ -738,8 +737,8 @@
                 if (d.total_meters) details.push('Toplam: ' + d.total_meters + ' m');
             } else if (entry.entry_type === 'drilling' && String(d.drilling_type || '').toLocaleLowerCase('tr-TR') === 'ayna') {
                 details = [];
-                if (d.material_type) details.push(d.material_type === 'cevher' ? 'Cevher' : 'Patar');
-                if (Array.isArray(d.explosives)) d.explosives.forEach(item => details.push(item.name + ': ' + item.quantity));
+                const reports = Array.isArray(d.ayna_reports) && d.ayna_reports.length ? d.ayna_reports : [{ material_type: d.material_type, explosives: d.explosives }];
+                reports.forEach((report, index) => { details.push('Ayna ' + (index + 1) + ': ' + (report.material_type === 'cevher' ? 'Cevher' : 'Pasa')); if (Array.isArray(report.explosives)) report.explosives.forEach(item => details.push(item.name + ': ' + item.quantity)); });
             } else if (entry.entry_type === 'material') {
                 details = ['Malzeme: ' + d.name, 'Miktar: ' + d.quantity + ' ' + d.unit, 'Kategori: ' + d.category];
             } else if (entry.entry_type === 'loder') {
@@ -758,8 +757,8 @@
                 if (!d.drilling_type) return d.meter + 'm | Sira ' + d.row + ' | ' + d.holes;
                 const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'ayna') {
-                    const explosives = Array.isArray(d.explosives) ? d.explosives.map(item => item.name + ': ' + item.quantity).join(' | ') : '';
-                    return [d.material_type ? (d.material_type === 'cevher' ? 'Cevher' : 'Patar') : '', explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | ');
+                    const reports = Array.isArray(d.ayna_reports) && d.ayna_reports.length ? d.ayna_reports : [{ material_type: d.material_type, explosives: d.explosives }];
+                    return reports.map((report, index) => { const explosives = Array.isArray(report.explosives) ? report.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : ''; return ['Ayna ' + (index + 1) + ': ' + (report.material_type === 'cevher' ? 'Cevher' : 'Pasa'), explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | '); }).join(' | ');
                 }
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const holes = Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik').join(' | ') : '';
