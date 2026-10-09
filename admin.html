@@ -603,7 +603,7 @@
             const container = document.getElementById('editEntryFields');
             const entryType = document.getElementById('editEntryType').value;
             const details = editEntryDetails || {};
-            let html = editField('İsim', 'first_name', details.first_name || '') + editField('Soyisim', 'last_name', details.last_name || '');
+            let html = editField('İsim', 'first_name', details.first_name || '') + editField('Soyisim', 'last_name', details.last_name || '') + editField('Açıklama', 'description', details.description || '');
             if (entryType === 'drilling') {
                 html += '<div><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select data-edit-key="drilling_type" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg">' + drillingTypes.map(type => '<option value="' + type.name + '"' + (type.name === details.drilling_type ? ' selected' : '') + '>' + type.name + '</option>').join('') + '</select></div>';
                 const drillingType = (details.drilling_type || '').toLocaleLowerCase('tr-TR');
@@ -749,6 +749,7 @@
             } else {
                 details = formatDetails(entry).split(' | ');
             }
+            if (d.description) details.push('Açıklama: ' + d.description);
             return details.filter(Boolean).map(detail => '<div class="detail-line">' + detail + '</div>').join('');
         }
         function formatDetails(entry) {
@@ -758,11 +759,11 @@
                 const tip = drillingTypes.find(t => t.id === d.drilling_type_id) || drillingTypes.find(t => t.name === d.drilling_type);
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'ayna') {
                     const reports = Array.isArray(d.ayna_reports) && d.ayna_reports.length ? d.ayna_reports : [{ material_type: d.material_type, explosives: d.explosives }];
-                    return reports.map((report, index) => { const explosives = Array.isArray(report.explosives) ? report.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : ''; return ['Ayna ' + (index + 1) + ': ' + (report.material_type === 'cevher' ? 'Cevher' : 'Pasa'), explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | '); }).join(' | ');
+                    return [reports.map((report, index) => { const explosives = Array.isArray(report.explosives) ? report.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : ''; return ['Ayna ' + (index + 1) + ': ' + (report.material_type === 'cevher' ? 'Cevher' : 'Pasa'), explosives ? 'Patlayıcı: ' + explosives : ''].filter(Boolean).join(' | '); }).join(' | '), d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
                 }
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const holes = Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik').join(' | ') : '';
-                    return [holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : ''].filter(Boolean).join(' | ');
+                    return [holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
                 }
                 let alanlar = [];
                 if (tip && Array.isArray(tip.fields)) {
@@ -774,15 +775,16 @@
                 alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
                 return parcalar.join(' | ');
             }
-            if (entry.entry_type === 'material') return d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category;
+            if (entry.entry_type === 'material') return [d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             if (entry.entry_type === 'loder') {
                 const sonuc = ['Kepce ' + d.loader, d.hours + ' saat'];
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc.push('Cevher: ' + d.cevher_kovasi + ' kova');
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc.push('Pasa: ' + d.pasa_kovasi + ' kova');
                 if (d.shift) sonuc.push(shiftLabel(d.shift));
+                if (d.description) sonuc.push('Açıklama: ' + d.description);
                 return sonuc.join(' | ');
             }
-            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [oreTypeLabel(d.type), d.quantity, yon, d.shift ? shiftLabel(d.shift) : ''].filter(Boolean).join(' | '); }
+            if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [oreTypeLabel(d.type), d.quantity, yon, d.shift ? shiftLabel(d.shift) : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | '); }
             return JSON.stringify(d);
         }
 

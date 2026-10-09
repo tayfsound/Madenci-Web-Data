@@ -135,6 +135,7 @@
                     <div><label class="block text-xs text-slate-400 mb-1.5">Delgi Tipi</label><select id="d_type" class="input-dark w-full px-3 py-2.5 rounded-xl" onchange="renderDrillingFields()"><option value="">Sec</option><option value="00000000-0000-4000-8000-000000000001">Ayna</option><option value="00000000-0000-4000-8000-000000000002">Tavan</option></select></div>
                     <div id="d_dynamicFields" class="grid grid-cols-2 gap-3"></div>
                     <div id="d_typeHint" class="text-xs text-slate-500">Delgi tipini secince o tipe ait alanlar acılır.</div>
+                    <textarea id="d_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('drilling')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -160,6 +161,7 @@
                             <i class="fas fa-plus-circle"></i><span>Malzeme Ekle</span>
                         </button>
                     </div>
+                    <textarea id="m_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('material')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -186,6 +188,7 @@
                     </div>
                     <div id="oreLocationGroups" class="space-y-4"></div>
                     <div class="text-xs text-slate-500">Her çalışma alanı için kendi cevher/pasa hareketlerini girin.</div>
+                    <textarea id="o_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('ore')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -208,6 +211,7 @@
                     <div class="flex items-end"><button type="button" onclick="addLoderLocationGroup()" class="w-full py-2.5 rounded-xl border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Çalışma Alanı Ekle</button></div>
                     <div id="loderLocationGroups" class="space-y-4"></div>
                     <div class="text-xs text-slate-500">Her çalışma alanı için kendi loder bilgilerini girin.</div>
+                    <textarea id="ld_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('loder')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
@@ -386,6 +390,8 @@
                 add('Vardiya', 'Çalışılan vardiyayı seçin.', [field('Vardiya', 'ld_shift')]);
                 add('Çalışma alanları', 'Lokasyon, kepçe ve çalışma saatlerini girin.', [document.getElementById('loderLocationGroups'), document.querySelector('#form-loder button[onclick="addLoderLocationGroup()"]')]);
             }
+            add('Açıklama', 'İsterseniz bu rapora manuel bir not ekleyin.', [field('Açıklama', prefix + '_description')]);
+            document.getElementById(prefix + '_description').required = false;
             const footer = document.createElement('div'); footer.className = 'real-wizard-footer'; const back = document.createElement('button'); back.type = 'button'; back.className = 'wizard-back'; back.textContent = 'Geri'; const next = document.createElement('button'); next.type = 'button'; next.className = 'btn-primary'; next.textContent = 'Devam Et'; footer.append(back,next); shell.appendChild(footer); form.querySelector('.glass').appendChild(shell); shell.appendChild(submit);
             let index = 0; const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); progress.textContent = (index + 1) + ' / ' + steps.length; back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { const invalid = steps[index].querySelector(':invalid'); if (invalid) { invalid.reportValidity(); return; } if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
         }
@@ -649,6 +655,7 @@
                 data.date = document.getElementById('d_date').value;
                 data.location = document.getElementById('d_location').value;
                 data.details = { ...reporter, drilling_type_id: tip.id, drilling_type: tip.name };
+                data.details.description = document.getElementById('d_description').value.trim();
                 if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
                     const reports = Array.from(document.querySelectorAll('#d_aynaRows .ayna-report-row')).map(row => ({ material_type: row.querySelector('.d-ayna-material-type').value, explosives: Array.from(row.querySelectorAll('.d-ayna-explosive-qty')).filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value })) }));
                     if (!reports.length || reports.some(report => !report.material_type)) { alert('Her Ayna raporu için Cevher veya Pasa seçin.'); return; }
@@ -673,7 +680,7 @@
                 for (const row of rows) {
                     const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), qty = row.querySelector('.m-qty'), unit = row.querySelector('.m-unit');
                     if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
-                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
+                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, description: document.getElementById('m_description').value.trim(), category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
                 }
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
                 const { error } = await db.from('entries').insert(payload);
@@ -692,7 +699,7 @@
                         { type: 'pasa', quantity: group.querySelector('.o-pasa-iceri').value.trim(), direction: 'iceri', shift },
                         { type: 'pasa', quantity: group.querySelector('.o-pasa-disari').value.trim(), direction: 'disari', shift }
                     ];
-                    quantities.filter(item => item.quantity).forEach(item => rows.push({ date, location, details: { ...reporter, ...item } }));
+                    quantities.filter(item => item.quantity).forEach(item => rows.push({ date, location, details: { ...reporter, description: document.getElementById('o_description').value.trim(), ...item } }));
                 });
                 if (!date || !rows.length || rows.some(row => !row.location)) { alert('Tarih, her lokasyon ve en az bir miktar zorunludur.'); return; }
                 const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'ore', location: row.location, details: row.details })));
@@ -709,7 +716,7 @@
                     const hours = group.querySelector('.ld-hours').value.trim();
                     const loader = loaders.find(item => item.id === loaderId);
                     if (!loader && !location && !hours) return;
-                    rows.push({ date, location, details: { ...reporter, loader_id: loaderId, loader: loader ? loader.name : '', hours, cevher_kovasi: group.querySelector('.ld-cevher').value.trim() || '0', pasa_kovasi: group.querySelector('.ld-pasa').value.trim() || '0', shift } });
+                    rows.push({ date, location, details: { ...reporter, description: document.getElementById('ld_description').value.trim(), loader_id: loaderId, loader: loader ? loader.name : '', hours, cevher_kovasi: group.querySelector('.ld-cevher').value.trim() || '0', pasa_kovasi: group.querySelector('.ld-pasa').value.trim() || '0', shift } });
                 });
                 if (!date || !shift || !rows.length || rows.some(row => !row.location || !row.details.loader_id || !row.details.hours)) { alert('Tarih, vardiya, her çalışma alanı, kepçe ve çalışma saati zorunludur.'); return; }
                 const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'loder', location: row.location, details: row.details })));
