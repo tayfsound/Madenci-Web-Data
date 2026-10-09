@@ -39,6 +39,7 @@
         .real-wizard-step { display:none; animation: fadeIn .22s ease-out; }
         .real-wizard-step.is-active { display:block; }
         .real-wizard-step > .glass { padding:1rem; }
+        .wizard-host { background:transparent !important; border:0 !important; box-shadow:none !important; padding:0 !important; }
         .real-wizard-step-title { font-size:1.05rem; font-weight:700; margin-bottom:.25rem; }
         .real-wizard-step-subtitle { color:#94a3b8; font-size:.78rem; margin-bottom:1rem; }
         .real-wizard-footer { display:flex; gap:.75rem; margin-top:1rem; }
@@ -352,29 +353,17 @@
         }
 
         let activeWizardType = '';
-        function setupWizard(type) {
-            const form = document.getElementById('form-' + type); if (!form) return;
-            const content = form.querySelector('.space-y-4'); if (!content) return;
-            const steps = Array.from(content.children).filter(el => !el.classList.contains('wizard-controls'));
-            steps.forEach(step => step.classList.add('wizard-step'));
-            let controls = content.querySelector('.wizard-controls');
-            if (!controls) { controls = document.createElement('div'); controls.className = 'wizard-controls'; controls.innerHTML = '<button type="button" class="wizard-back">Geri</button><button type="button" class="btn-primary wizard-next">Devam Et</button>'; content.appendChild(controls); }
-            let index = 0;
-            const submit = form.querySelector('button[onclick^="submitEntry"]');
-            const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); controls.querySelector('.wizard-back').classList.toggle('invisible', index === 0); controls.querySelector('.wizard-next').classList.toggle('hidden', index === steps.length - 1); if (submit) submit.classList.toggle('hidden', index !== steps.length - 1); };
-            controls.querySelector('.wizard-back').onclick = () => { if (index > 0) { index--; render(); } else showSelection(); };
-            controls.querySelector('.wizard-next').onclick = () => { if (index < steps.length - 1) { index++; render(); } };
-            render(); activeWizardType = type;
-        }
         const wizardBuilt = {};
         function buildRealWizard(type) {
             if (wizardBuilt[type]) { showWizardStep(type, 0); return; }
-            const form = document.getElementById('form-' + type); const original = form.querySelector('.space-y-4'); const submit = form.querySelector('button[onclick^="submitEntry"]');
+            const form = document.getElementById('form-' + type); const host = form.querySelector('.glass'); const original = form.querySelector('.space-y-4'); const submit = form.querySelector('button[onclick^="submitEntry"]');
             if (!original || !submit) return;
+            host.classList.add('wizard-host');
             original.classList.add('hidden'); submit.classList.add('hidden');
             const shell = document.createElement('div'); shell.className = 'real-wizard'; shell.dataset.type = type;
+            const progress = document.createElement('div'); progress.className = 'text-xs text-slate-500 text-center mb-3'; shell.appendChild(progress);
             const steps = [];
-            const field = (title, id, subtitle) => { const source = document.getElementById(id); if (!source) return null; const box = document.createElement('div'); box.className = 'space-y-2'; const label = document.createElement('label'); label.className = 'block text-sm text-slate-300'; label.textContent = title; box.append(label, source.type === 'date' && source.nextElementSibling?.classList.contains('date-wheel') ? source.nextElementSibling : source); if (subtitle) { const hint = document.createElement('p'); hint.className = 'text-xs text-slate-500'; hint.textContent = subtitle; box.append(hint); } return box; };
+            const field = (title, id, subtitle) => { const source = document.getElementById(id); if (!source) return null; source.required = true; const box = document.createElement('div'); box.className = 'space-y-2'; const label = document.createElement('label'); label.className = 'block text-sm text-slate-300'; label.textContent = title; box.append(label, source.type === 'date' && source.nextElementSibling?.classList.contains('date-wheel') ? source.nextElementSibling : source); if (subtitle) { const hint = document.createElement('p'); hint.className = 'text-xs text-slate-500'; hint.textContent = subtitle; box.append(hint); } return box; };
             const add = (title, subtitle, body) => { const step = document.createElement('div'); step.className = 'real-wizard-step'; const card = document.createElement('div'); card.className = 'glass rounded-2xl'; card.innerHTML = '<div class="real-wizard-step-title">' + title + '</div><div class="real-wizard-step-subtitle">' + (subtitle || '') + '</div>'; if (body) body.forEach(node => { if (node) card.appendChild(node); }); step.appendChild(card); shell.appendChild(step); steps.push(step); };
             const prefix = type === 'loder' ? 'ld' : type.charAt(0);
             add('İsim', 'Adınızı girin.', [field('İsim', prefix + '_firstName')]);
@@ -394,7 +383,7 @@
                 add('Çalışma alanları', 'Lokasyon, kepçe ve çalışma saatlerini girin.', [document.getElementById('loderLocationGroups'), document.querySelector('#form-loder button[onclick="addLoderLocationGroup()"]')]);
             }
             const footer = document.createElement('div'); footer.className = 'real-wizard-footer'; const back = document.createElement('button'); back.type = 'button'; back.className = 'wizard-back'; back.textContent = 'Geri'; const next = document.createElement('button'); next.type = 'button'; next.className = 'btn-primary'; next.textContent = 'Devam Et'; footer.append(back,next); shell.appendChild(footer); form.querySelector('.glass').appendChild(shell); shell.appendChild(submit);
-            let index = 0; const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
+            let index = 0; const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); progress.textContent = (index + 1) + ' / ' + steps.length; back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { const invalid = steps[index].querySelector(':invalid'); if (invalid) { invalid.reportValidity(); return; } if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
         }
         function showWizardStep(type, index) { const shell = document.querySelector('.real-wizard[data-type="' + type + '"]'); if (shell?._reset) shell._reset(); }
         function showSuccess(type) { activeWizardType = type; document.getElementById('formScreens').classList.add('hidden'); document.getElementById('selectionScreen').classList.add('hidden'); document.getElementById('successScreen').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
