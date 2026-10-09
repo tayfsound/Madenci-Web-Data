@@ -288,17 +288,6 @@
             }
             trigger.addEventListener('click', () => { panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) render(); });
             panel.addEventListener('click', event => { const option = event.target.closest('.date-wheel-option'); if (option) update(option.closest('.date-wheel-column').dataset.part, option.dataset.value); });
-            Object.values(columns).forEach(column => {
-                let scrollTimer;
-                column.addEventListener('scroll', () => {
-                    clearTimeout(scrollTimer);
-                    scrollTimer = setTimeout(() => {
-                        const center = column.scrollTop + column.clientHeight / 2;
-                        const option = [...column.querySelectorAll('.date-wheel-option')].sort((a,b) => Math.abs(a.offsetTop + a.offsetHeight / 2 - center) - Math.abs(b.offsetTop + b.offsetHeight / 2 - center))[0];
-                        if (option && !option.classList.contains('is-selected')) update(column.dataset.part, option.dataset.value);
-                    }, 130);
-                });
-            });
             input.addEventListener('change', render); render();
         }
         function initDateWheelPickers() { document.querySelectorAll('input[type="date"]').forEach(createDateWheel); }
