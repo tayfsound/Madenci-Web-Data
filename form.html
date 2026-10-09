@@ -368,6 +368,20 @@
             const prefix = type === 'loder' ? 'ld' : type.charAt(0);
             add('İsim', 'Adınızı girin.', [field('İsim', prefix + '_firstName')]);
             add('Soyisim', 'Soyadınızı girin.', [field('Soyisim', prefix + '_lastName')]);
+            const firstNameInput = document.getElementById(prefix + '_firstName');
+            const lastNameInput = document.getElementById(prefix + '_lastName');
+            [firstNameInput, lastNameInput].forEach(input => { if (input) input.setAttribute('autocomplete', 'name'); });
+            const savedFirstName = localStorage.getItem('madenci_saved_first_name') || '';
+            const savedLastName = localStorage.getItem('madenci_saved_last_name') || '';
+            const rememberPersonalInfo = localStorage.getItem('madenci_remember_personal_info') === 'true';
+            if (firstNameInput && !firstNameInput.value) firstNameInput.value = savedFirstName;
+            if (lastNameInput && !lastNameInput.value) lastNameInput.value = savedLastName;
+            const rememberBox = document.createElement('label'); rememberBox.className = 'mt-4 flex items-center gap-2 text-sm text-slate-400 cursor-pointer'; rememberBox.innerHTML = '<input type="checkbox" class="accent-emerald-500" ' + (rememberPersonalInfo ? 'checked' : '') + '> Bu cihazda isim ve soyisimi hatırla';
+            steps[1].querySelector('.glass').appendChild(rememberBox);
+            const rememberInput = rememberBox.querySelector('input');
+            const persistPersonalInfo = () => { if (rememberInput.checked) { localStorage.setItem('madenci_saved_first_name', firstNameInput?.value.trim() || ''); localStorage.setItem('madenci_saved_last_name', lastNameInput?.value.trim() || ''); localStorage.setItem('madenci_remember_personal_info', 'true'); } };
+            firstNameInput?.addEventListener('input', persistPersonalInfo); lastNameInput?.addEventListener('input', persistPersonalInfo);
+            rememberInput.addEventListener('change', () => { if (rememberInput.checked) persistPersonalInfo(); else { localStorage.removeItem('madenci_saved_first_name'); localStorage.removeItem('madenci_saved_last_name'); localStorage.removeItem('madenci_remember_personal_info'); } });
             add('Tarih', 'Raporun tarihini seçin.', [field('Tarih', prefix + '_date')]);
             if (type === 'drilling') {
                 add('Lokasyon', 'Çalışma alanını seçin.', [field('Lokasyon', 'd_location')]);
