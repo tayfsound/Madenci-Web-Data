@@ -258,13 +258,14 @@
         function createDateWheel(input) {
             if (input.dataset.wheelReady) return;
             input.dataset.wheelReady = 'true'; input.classList.add('hidden');
+            if (input.value) { const parts = input.value.split('-'); input.value = new Date().getFullYear() + '-' + parts[1] + '-' + parts[2]; }
             const wrapper = document.createElement('div'); wrapper.className = 'date-wheel';
             const trigger = document.createElement('button'); trigger.type = 'button'; trigger.className = 'date-wheel-trigger';
             const icon = document.createElement('i'); icon.className = 'fas fa-calendar-alt text-slate-400';
             const text = document.createElement('span'); trigger.append(text, icon);
             const panel = document.createElement('div'); panel.className = 'date-wheel-panel';
             const columns = {};
-            [['day','Gün'],['month','Ay'],['year','Yıl']].forEach(([key,label]) => {
+            [['day','Gün'],['month','Ay']].forEach(([key,label]) => {
                 const group = document.createElement('div'); const caption = document.createElement('span'); caption.className = 'date-wheel-label'; caption.textContent = label;
                 const column = document.createElement('div'); column.className = 'date-wheel-column'; column.dataset.part = key; group.append(caption,column); panel.appendChild(group); columns[key] = column;
             });
@@ -273,16 +274,16 @@
             function render() {
                 const [year,month,day] = current().split('-').map(Number);
                 const maxDay = new Date(year, month, 0).getDate();
-                const values = { day: Array.from({length:maxDay},(_,i)=>i+1), month: DATE_MONTHS.map((name,i)=>({value:i+1,label:name})), year: Array.from({length:7},(_,i)=>year-3+i) };
+                const values = { day: Array.from({length:maxDay},(_,i)=>i+1), month: DATE_MONTHS.map((name,i)=>({value:i+1,label:name})) };
                 Object.entries(values).forEach(([key,list]) => {
-                    const selected = key === 'day' ? day : key === 'month' ? month : year;
+                    const selected = key === 'day' ? day : month;
                     columns[key].innerHTML = list.map(item => { const value = typeof item === 'object' ? item.value : item; const label = typeof item === 'object' ? item.label : item; return '<button type="button" class="date-wheel-option' + (value === selected ? ' is-selected' : '') + '" data-value="' + value + '">' + label + '</button>'; }).join('');
                     const active = columns[key].querySelector('.is-selected'); if (active) columns[key].scrollTop = active.offsetTop - columns[key].clientHeight / 2 + active.offsetHeight / 2;
                 });
                 text.textContent = String(day).padStart(2,'0') + ' ' + DATE_MONTHS[month-1] + ' ' + year;
             }
             function update(key,value) {
-                const [oldYear,oldMonth,oldDay] = current().split('-').map(Number); const next = {day:oldDay,month:oldMonth,year:oldYear}; next[key] = Number(value);
+                const [oldYear,oldMonth,oldDay] = current().split('-').map(Number); const next = {day:oldDay,month:oldMonth,year:new Date().getFullYear()}; next[key] = Number(value);
                 const maxDay = new Date(next.year, next.month, 0).getDate(); next.day = Math.min(next.day,maxDay);
                 input.value = next.year + '-' + String(next.month).padStart(2,'0') + '-' + String(next.day).padStart(2,'0'); render(); playDateClick();
             }
