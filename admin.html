@@ -740,7 +740,7 @@
                 const reports = Array.isArray(d.ayna_reports) && d.ayna_reports.length ? d.ayna_reports : [{ material_type: d.material_type, explosives: d.explosives }];
                 reports.forEach((report, index) => { details.push('Ayna ' + (index + 1) + ': ' + (report.material_type === 'cevher' ? 'Cevher' : 'Pasa')); if (Array.isArray(report.explosives)) report.explosives.forEach(item => details.push(item.name + ': ' + item.quantity)); });
             } else if (entry.entry_type === 'material') {
-                details = ['Malzeme: ' + d.name, 'Miktar: ' + d.quantity + ' ' + d.unit, 'Kategori: ' + d.category];
+                details = ['Malzeme: ' + d.name, 'Miktar: ' + d.quantity + ' ' + d.unit, 'Kategori: ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : ''];
             } else if (entry.entry_type === 'loder') {
                 details = ['Kepçe: ' + d.loader, 'Çalışma saati: ' + d.hours];
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') details.push('Cevher: ' + d.cevher_kovasi + ' kova');
@@ -775,7 +775,7 @@
                 alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
                 return parcalar.join(' | ');
             }
-            if (entry.entry_type === 'material') return [d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
+            if (entry.entry_type === 'material') return [d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             if (entry.entry_type === 'loder') {
                 const sonuc = ['Kepce ' + d.loader, d.hours + ' saat'];
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc.push('Cevher: ' + d.cevher_kovasi + ' kova');

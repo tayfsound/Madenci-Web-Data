@@ -613,29 +613,38 @@
             });
         }
 
+        function isFuelMaterial(categoryName, materialName) { const text = normalizeTurkishText((categoryName || '') + ' ' + (materialName || '')); return /akaryakit|yakit|mazot|benzin|motorin|dizel/.test(text); }
+        function isOilMaterial(categoryName, materialName) { const text = normalizeTurkishText((categoryName || '') + ' ' + (materialName || '')); return /yag|yağ|gres|lubr/.test(text); }
+        function updateMaterialDestinationFields(row) {
+            const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), loader = row.querySelector('.m-loader');
+            const categoryName = catSel.options[catSel.selectedIndex]?.text || '', materialName = matSel.options[matSel.selectedIndex]?.text || '';
+            const fuel = isFuelMaterial(categoryName, materialName); loader.required = fuel; loader.classList.toggle('hidden', !fuel); row.querySelector('.m-loader-label').classList.toggle('hidden', !fuel); row.querySelector('.m-destination').placeholder = isOilMaterial(categoryName, materialName) ? 'Örn: BBC makinesi, Loder 3, Tabanca' : 'Örn: BBC makinesi, Loder, Tabanca';
+        }
         function addMaterialRow(data) {
             const row = document.createElement('div');
-            row.className = 'material-row grid grid-cols-12 gap-2 items-center';
-            row.innerHTML = '<select class="m-cat input-dark col-span-4 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select>' +
-                '<select class="m-name input-dark col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select>' +
-                '<input type="number" class="m-qty input-dark col-span-3 px-2 py-2 rounded-lg text-sm" placeholder="Miktar">' +
-                '<select class="m-unit input-dark col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Ad</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option></select>' +
-                '<button type="button" class="col-span-1 text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
+            row.className = 'material-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
+            row.innerHTML = '<select class="m-cat input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select><select class="m-name input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select><input type="number" class="m-qty input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Miktar"><select class="m-unit input-dark sm:col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Ad</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option></select><input type="text" class="m-destination input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Nereye kullanıldı?"><div class="sm:col-span-1"><label class="m-loader-label hidden block text-[10px] text-orange-300 mb-1">Loder</label><select class="m-loader input-dark hidden w-full px-1 py-2 rounded-lg text-sm"><option value="">Loder no</option></select></div><button type="button" class="text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
             const catSel = row.querySelector('.m-cat');
             categories.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; catSel.appendChild(o); });
+            const loaderSel = row.querySelector('.m-loader'); loaders.forEach(loader => { const o = document.createElement('option'); o.value = loader.id; o.textContent = loader.name; loaderSel.appendChild(o); });
             catSel.addEventListener('change', function() {
                 const matSel = row.querySelector('.m-name');
                 matSel.innerHTML = '<option value="">Malzeme</option>';
                 const cid = this.value;
                 if (cid && materialsByCategory[cid]) materialsByCategory[cid].forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; matSel.appendChild(o); });
+                updateMaterialDestinationFields(row);
             });
+            matSel.addEventListener('change', () => updateMaterialDestinationFields(row));
             row.querySelector('button').addEventListener('click', () => row.remove());
             if (data) {
                 catSel.value = data.category_id || '';
                 if (data.category_id) { catSel.dispatchEvent(new Event('change')); row.querySelector('.m-name').value = data.material_id || ''; }
                 row.querySelector('.m-qty').value = data.quantity || '';
                 row.querySelector('.m-unit').value = data.unit || 'adet';
+                row.querySelector('.m-destination').value = data.destination || '';
+                row.querySelector('.m-loader').value = data.loader_id || '';
             }
+            updateMaterialDestinationFields(row);
             document.getElementById('materialRows').appendChild(row);
         }
 
@@ -679,8 +688,12 @@
                 const payload = [];
                 for (const row of rows) {
                     const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), qty = row.querySelector('.m-qty'), unit = row.querySelector('.m-unit');
+                    const destination = row.querySelector('.m-destination'), loaderSel = row.querySelector('.m-loader');
                     if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
-                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, description: document.getElementById('m_description').value.trim(), category: catSel.options[catSel.selectedIndex].text, category_id: catSel.value, name: matSel.options[matSel.selectedIndex].text, material_id: matSel.value, quantity: qty.value, unit: unit.value } });
+                    if (!destination.value.trim()) { alert('Her malzeme için nereye kullanıldığını girin.'); destination.focus(); return; }
+                    const categoryName = catSel.options[catSel.selectedIndex].text, materialName = matSel.options[matSel.selectedIndex].text;
+                    if (isFuelMaterial(categoryName, materialName) && !loaderSel.value) { alert('Akaryakıt için loder numarası zorunludur.'); loaderSel.focus(); return; }
+                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, description: document.getElementById('m_description').value.trim(), category: categoryName, category_id: catSel.value, name: materialName, material_id: matSel.value, quantity: qty.value, unit: unit.value, destination: destination.value.trim(), loader_id: loaderSel.value || '', loader: loaderSel.value ? loaderSel.options[loaderSel.selectedIndex].text : '' } });
                 }
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
                 const { error } = await db.from('entries').insert(payload);
