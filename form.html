@@ -617,8 +617,7 @@
         function isOilMaterial(categoryName, materialName) { const text = normalizeTurkishText((categoryName || '') + ' ' + (materialName || '')); return /yag|yağ|gres|lubr/.test(text); }
         function updateMaterialDestinationFields(row) {
             const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), loader = row.querySelector('.m-loader');
-            const categoryName = catSel.options[catSel.selectedIndex]?.text || '', materialName = matSel.options[matSel.selectedIndex]?.text || '';
-            const fuel = isFuelMaterial(categoryName, materialName); loader.required = fuel; loader.classList.toggle('hidden', !fuel); row.querySelector('.m-loader-label').classList.toggle('hidden', !fuel);
+            loader.required = false; loader.classList.remove('hidden'); row.querySelector('.m-loader-label').classList.remove('hidden');
         }
         function addMaterialRow(data) {
             const row = document.createElement('div');
@@ -690,7 +689,6 @@
                     const loaderSel = row.querySelector('.m-loader');
                     if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
                     const categoryName = catSel.options[catSel.selectedIndex].text, materialName = matSel.options[matSel.selectedIndex].text;
-                    if (isFuelMaterial(categoryName, materialName) && !loaderSel.value) { alert('Akaryakıt için loder numarası zorunludur.'); loaderSel.focus(); return; }
                     payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, description: document.getElementById('m_description').value.trim(), category: categoryName, category_id: catSel.value, name: materialName, material_id: matSel.value, quantity: qty.value, unit: unit.value, loader_id: loaderSel.value || '', loader: loaderSel.value ? loaderSel.options[loaderSel.selectedIndex].text : '' } });
                 }
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
