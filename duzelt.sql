@@ -42,6 +42,10 @@ create policy locations_delete on public.locations
   for delete to authenticated
   using (public.is_admin());
 
+-- Admin hangi malzemede loder numarasının zorunlu olacağını seçebilir
+alter table public.materials
+  add column if not exists requires_loader boolean not null default false;
+
 -- 4) Sonucu göster: her tabloda hangi izinler var
 select tablename, cmd, policyname
 from pg_policies

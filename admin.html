@@ -199,6 +199,7 @@
                             <div class="space-y-2 mb-4">
                                 <select id="materialCategorySelect" class="input-dark w-full px-3 py-2 rounded-lg text-sm" onchange="loadMaterialsList()"><option value="">Kategori sec</option></select>
                                 <input type="text" id="newMaterialName" class="input-dark w-full px-3 py-2 rounded-lg text-sm" placeholder="Malzeme adi">
+                                <label class="flex items-center gap-2 text-xs text-slate-400"><input type="checkbox" id="newMaterialRequiresLoader" class="accent-emerald-500"> Loder numarası zorunlu</label>
                                 <button onclick="addMaterial()" class="w-full px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-sm font-medium"><i class="fas fa-plus mr-1"></i>Ekle</button>
                             </div>
                             <div id="materialsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
@@ -830,19 +831,26 @@
             mats.forEach(mat => {
                 const item = document.createElement('div');
                 item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm';
-                const span = document.createElement('span'); span.textContent = mat.name;
+                const span = document.createElement('span'); span.textContent = mat.name + (mat.requires_loader ? ' · Loder zorunlu' : '');
                 const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                 btn.addEventListener('click', () => deleteMaterial(mat.id));
-                item.appendChild(span); item.appendChild(btn); div.appendChild(item);
+                const toggle = document.createElement('button'); toggle.className = mat.requires_loader ? 'text-emerald-400 text-xs mr-3' : 'text-slate-400 text-xs mr-3'; toggle.textContent = mat.requires_loader ? 'Zorunlu' : 'Opsiyonel'; toggle.title = 'Loder zorunluluğunu değiştir'; toggle.addEventListener('click', () => toggleMaterialLoader(mat));
+                const actions = document.createElement('div'); actions.append(toggle, btn); item.append(span, actions); div.appendChild(item);
             });
         }
         async function addMaterial() {
             const catId = document.getElementById('materialCategorySelect').value;
             const name = document.getElementById('newMaterialName').value.trim();
             if (!catId || !name) return alert('Kategori ve malzeme adi gerekli');
-            const { error } = await db.from('materials').insert([{ category_id: catId, name }]);
+            const requiresLoader = document.getElementById('newMaterialRequiresLoader').checked;
+            const { error } = await db.from('materials').insert([{ category_id: catId, name, requires_loader: requiresLoader }]);
             if (error) alert('Hata: ' + error.message);
-            else { document.getElementById('newMaterialName').value = ''; loadMaterialsList(); await loadCategoriesAndMaterials(); }
+            else { document.getElementById('newMaterialName').value = ''; document.getElementById('newMaterialRequiresLoader').checked = false; loadMaterialsList(); await loadCategoriesAndMaterials(); }
+        }
+        async function toggleMaterialLoader(material) {
+            const { error } = await db.from('materials').update({ requires_loader: !material.requires_loader }).eq('id', material.id);
+            if (error) return alert('Hata: ' + error.message);
+            await loadMaterialsList(); await loadCategoriesAndMaterials();
         }
         async function deleteMaterial(id) {
             if (!confirm('Malzemeyi sil?')) return;
