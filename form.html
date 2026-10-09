@@ -389,6 +389,22 @@
         function showSuccess(type) { activeWizardType = type; document.getElementById('formScreens').classList.add('hidden'); document.getElementById('selectionScreen').classList.add('hidden'); document.getElementById('successScreen').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
         function startNewForm() { showSelection(); }
         function returnToHome() { showSelection(); }
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                const activeForm = document.querySelector('#formScreens:not(.hidden) .real-wizard');
+                if (activeForm) { event.preventDefault(); activeForm.querySelector('.wizard-back')?.click(); }
+                return;
+            }
+            if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.isComposing) return;
+            const target = event.target;
+            if (target.matches('textarea, button, .date-wheel-option') || target.closest('.date-wheel-column')) return;
+            const activeForm = document.querySelector('#formScreens:not(.hidden) .real-wizard');
+            if (!activeForm) return;
+            event.preventDefault();
+            const next = activeForm.querySelector('.real-wizard-footer button.btn-primary:not(.hidden)');
+            const save = activeForm.querySelector('button[onclick^="submitEntry"]:not(.hidden)');
+            (next || save)?.click();
+        });
 
         async function loadCategoriesAndMaterials() {
             const { data: cats } = await db.from('categories').select('*').order('name');
