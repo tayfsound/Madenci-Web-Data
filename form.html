@@ -35,6 +35,14 @@
         .wizard-controls { display:flex; justify-content:space-between; gap:.75rem; margin-top:1.25rem; }
         .wizard-controls button { flex:1; padding:.75rem 1rem; border-radius:.75rem; font-weight:600; }
         .wizard-back { border:1px solid #475569; color:#cbd5e1; }
+        .real-wizard { margin-top:1rem; }
+        .real-wizard-step { display:none; animation: fadeIn .22s ease-out; }
+        .real-wizard-step.is-active { display:block; }
+        .real-wizard-step > .glass { padding:1rem; }
+        .real-wizard-step-title { font-size:1.05rem; font-weight:700; margin-bottom:.25rem; }
+        .real-wizard-step-subtitle { color:#94a3b8; font-size:.78rem; margin-bottom:1rem; }
+        .real-wizard-footer { display:flex; gap:.75rem; margin-top:1rem; }
+        .real-wizard-footer button { flex:1; padding:.8rem 1rem; border-radius:.75rem; font-weight:600; }
         @media (max-width: 520px) {
             .glass { border-radius: 1rem; }
             #formScreens .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
@@ -339,7 +347,7 @@
             document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => { el.value = getTodayDate(); el.dispatchEvent(new Event('change')); });
             if (type === 'ore' && !document.querySelector('#oreLocationGroups .ore-location-group')) addOreLocationGroup();
             if (type === 'loder' && !document.querySelector('#loderLocationGroups .loder-location-group')) addLoderLocationGroup();
-            setupWizard(type);
+            buildRealWizard(type);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -358,6 +366,37 @@
             controls.querySelector('.wizard-next').onclick = () => { if (index < steps.length - 1) { index++; render(); } };
             render(); activeWizardType = type;
         }
+        const wizardBuilt = {};
+        function buildRealWizard(type) {
+            if (wizardBuilt[type]) { showWizardStep(type, 0); return; }
+            const form = document.getElementById('form-' + type); const original = form.querySelector('.space-y-4'); const submit = form.querySelector('button[onclick^="submitEntry"]');
+            if (!original || !submit) return;
+            original.classList.add('hidden'); submit.classList.add('hidden');
+            const shell = document.createElement('div'); shell.className = 'real-wizard'; shell.dataset.type = type;
+            const steps = [];
+            const field = (title, id, subtitle) => { const source = document.getElementById(id); if (!source) return null; const box = document.createElement('div'); box.className = 'space-y-2'; const label = document.createElement('label'); label.className = 'block text-sm text-slate-300'; label.textContent = title; box.append(label, source.type === 'date' && source.nextElementSibling?.classList.contains('date-wheel') ? source.nextElementSibling : source); if (subtitle) { const hint = document.createElement('p'); hint.className = 'text-xs text-slate-500'; hint.textContent = subtitle; box.append(hint); } return box; };
+            const add = (title, subtitle, body) => { const step = document.createElement('div'); step.className = 'real-wizard-step'; const card = document.createElement('div'); card.className = 'glass rounded-2xl'; card.innerHTML = '<div class="real-wizard-step-title">' + title + '</div><div class="real-wizard-step-subtitle">' + (subtitle || '') + '</div>'; if (body) body.forEach(node => { if (node) card.appendChild(node); }); step.appendChild(card); shell.appendChild(step); steps.push(step); };
+            const prefix = type === 'loder' ? 'ld' : type.charAt(0);
+            add('İsim', 'Adınızı girin.', [field('İsim', prefix + '_firstName')]);
+            add('Soyisim', 'Soyadınızı girin.', [field('Soyisim', prefix + '_lastName')]);
+            add('Tarih', 'Raporun tarihini seçin.', [field('Tarih', prefix + '_date')]);
+            if (type === 'drilling') {
+                add('Lokasyon', 'Çalışma alanını seçin.', [field('Lokasyon', 'd_location')]);
+                add('Delgi tipi', 'Ayna veya tavan delgisini seçin.', [field('Delgi tipi', 'd_type')]);
+                add('Delgi bilgileri', 'Bu rapora ait detayları doldurun.', [document.getElementById('d_dynamicFields'), document.getElementById('d_typeHint')]);
+            } else if (type === 'material') {
+                add('Malzeme kullanımı', 'En az bir malzeme kalemi ekleyin.', [document.getElementById('materialRows'), document.querySelector('#form-material button[onclick="addMaterialRow()"]')]);
+            } else if (type === 'ore') {
+                add('Vardiya', 'Çalışılan vardiyayı seçin.', [field('Vardiya', 'o_shift')]);
+                add('Çalışma alanları', 'Lokasyon ve cevher/pasa hareketlerini girin.', [document.getElementById('oreLocationGroups'), document.querySelector('#form-ore button[onclick="addOreLocationGroup()"]')]);
+            } else if (type === 'loder') {
+                add('Vardiya', 'Çalışılan vardiyayı seçin.', [field('Vardiya', 'ld_shift')]);
+                add('Çalışma alanları', 'Lokasyon, kepçe ve çalışma saatlerini girin.', [document.getElementById('loderLocationGroups'), document.querySelector('#form-loder button[onclick="addLoderLocationGroup()"]')]);
+            }
+            const footer = document.createElement('div'); footer.className = 'real-wizard-footer'; const back = document.createElement('button'); back.type = 'button'; back.className = 'wizard-back'; back.textContent = 'Geri'; const next = document.createElement('button'); next.type = 'button'; next.className = 'btn-primary'; next.textContent = 'Devam Et'; footer.append(back,next); shell.appendChild(footer); form.querySelector('.glass').appendChild(shell); shell.appendChild(submit);
+            let index = 0; const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
+        }
+        function showWizardStep(type, index) { const shell = document.querySelector('.real-wizard[data-type="' + type + '"]'); if (shell?._reset) shell._reset(); }
         function showSuccess(type) { activeWizardType = type; document.getElementById('formScreens').classList.add('hidden'); document.getElementById('selectionScreen').classList.add('hidden'); document.getElementById('successScreen').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
         function startNewForm() { showSelection(); }
         function returnToHome() { showSelection(); }
