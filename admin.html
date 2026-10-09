@@ -176,7 +176,6 @@
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select id="adminDrillingType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm delgi tipleri</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Kategori</label><select id="adminCategory" onchange="populateAdminMaterialFilter()" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm kategoriler</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Malzeme</label><select id="adminMaterial" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm malzemeler</option></select></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Kullanım yeri</label><select id="adminDestination" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm kullanım yerleri</option></select></div>
                         <div class="flex items-end gap-2">
                             <button onclick="applyAdminFilters()" class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"><i class="fas fa-search mr-1"></i>Filtrele</button>
                             <button onclick="clearAdminFilters()" class="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-sm font-medium"><i class="fas fa-undo mr-1"></i>Temizle</button>
@@ -186,7 +185,7 @@
 
                 <div class="glass rounded-xl p-6 mt-6">
                     <h3 class="text-lg font-bold mb-4"><i class="fas fa-cogs mr-2 text-green-400"></i>Kategori & Malzeme Yonetimi</h3>
-                    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="grid sm:grid-cols-3 gap-6">
                         <div>
                             <h4 class="font-semibold text-blue-300 mb-3">Kategoriler</h4>
                             <div class="flex gap-2 mb-4">
@@ -194,11 +193,6 @@
                                 <button onclick="addCategory()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium"><i class="fas fa-plus"></i></button>
                             </div>
                             <div id="categoriesList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
-                        </div>
-                        <div>
-                            <h4 class="font-semibold text-orange-300 mb-3">Malzeme Kullanım Yerleri</h4>
-                            <div class="flex gap-2 mb-4"><input type="text" id="newDestinationName" class="input-dark flex-1 px-3 py-2 rounded-lg text-sm" placeholder="Örn: BBC Makinesi"><button onclick="addMaterialDestination()" class="px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-sm font-medium"><i class="fas fa-plus"></i></button></div>
-                            <div id="destinationsList" class="space-y-2 max-h-64 overflow-y-auto border border-slate-700 rounded p-3"></div>
                         </div>
                         <div>
                             <h4 class="font-semibold text-green-300 mb-3">Malzemeler</h4>
@@ -260,7 +254,7 @@
         let currentUser = null;
         let isAdmin = false;
         let currentAdminData = [];
-        let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [], materialDestinations = [];
+        let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
         const BUILTIN_DRILLING_TYPE_NAMES = ['Ayna', 'Tavan'];
         const DATE_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
         let dateAudioContext;
@@ -364,9 +358,6 @@
                 locations = locs;
                 populateAdminLocationFilter();
             }
-            const { data: destinations } = await db.from('material_destinations').select('*').order('name');
-            materialDestinations = destinations || [];
-            populateAdminDestinationFilter();
         }
         function populateAdminLocationFilter() {
             const select = document.getElementById('adminLoc');
@@ -380,12 +371,6 @@
                 select.appendChild(option);
             });
             if (locations.some(location => location.name === selectedLocation)) select.value = selectedLocation;
-        }
-        function populateAdminDestinationFilter() {
-            const select = document.getElementById('adminDestination'); if (!select) return;
-            const selected = select.value; select.innerHTML = '<option value="">Tüm kullanım yerleri</option>';
-            materialDestinations.filter(item => item.is_active !== false).forEach(item => { const option = document.createElement('option'); option.value = item.id; option.textContent = item.name; select.appendChild(option); });
-            select.value = selected;
         }
         function populateAdminCategoryFilter() {
             const select = document.getElementById('adminCategory');
@@ -475,7 +460,7 @@
             }
             document.getElementById(section + 'Section').classList.remove('hidden');
             if (section === 'admin') {
-                loadAdminData(); loadCategoriesList(); loadLocationsList(); loadLoadersList(); loadMaterialDestinationsList();
+                loadAdminData(); loadCategoriesList(); loadLocationsList(); loadLoadersList();
                 const select = document.getElementById('materialCategorySelect');
                 select.innerHTML = '<option value="">Kategori sec</option>';
                 categories.forEach(cat => { const opt = document.createElement('option'); opt.value = cat.id; opt.textContent = cat.name; select.appendChild(opt); });
@@ -548,7 +533,6 @@
             const drillingType = document.getElementById('adminDrillingType').value;
             const categoryId = document.getElementById('adminCategory').value;
             const materialId = document.getElementById('adminMaterial').value;
-            const destinationId = document.getElementById('adminDestination').value;
             let query = db.from('entries').select('*, profiles(full_name)').order('date', { ascending: false }).limit(500);
             if (startDate) query = query.gte('date', startDate);
             if (endDate) query = query.lte('date', endDate);
@@ -560,7 +544,6 @@
             if (drillingType) filtered = filtered.filter(e => e.entry_type === 'drilling' && e.details && e.details.drilling_type === drillingType);
             if (categoryId) filtered = filtered.filter(e => e.details && e.details.category_id === categoryId);
             if (materialId) filtered = filtered.filter(e => e.details && e.details.material_id === materialId);
-            if (destinationId) filtered = filtered.filter(e => e.details && e.details.destination_id === destinationId);
             currentAdminData = filtered;
             const tbody = document.getElementById('adminTableBody');
             if (!filtered.length) {
@@ -593,7 +576,6 @@
             document.getElementById('adminCategory').value = '';
             populateAdminMaterialFilter();
             document.getElementById('adminMaterial').value = '';
-            document.getElementById('adminDestination').value = '';
             loadAdminData();
         }
         function populateEditLocationOptions(selectedLocation) {
@@ -868,25 +850,6 @@
             if (error) alert('Silme hatasi: ' + error.message);
             else if (!data || data.length === 0) alert(RLS_DELETE_UYARISI('materials'));
             else { loadMaterialsList(); await loadCategoriesAndMaterials(); }
-        }
-        async function loadMaterialDestinationsList() {
-            const { data, error } = await db.from('material_destinations').select('*').order('name');
-            const div = document.getElementById('destinationsList'); if (!div) return;
-            if (error) { div.textContent = 'Kullanım yerleri yüklenemedi: ' + error.message; return; }
-            materialDestinations = data || []; div.innerHTML = '';
-            if (!materialDestinations.length) { div.textContent = 'Henüz kullanım yeri tanımlanmamış.'; return; }
-            materialDestinations.forEach(destination => { const item = document.createElement('div'); item.className = 'flex justify-between items-center p-2 bg-slate-800 rounded text-sm'; const span = document.createElement('span'); span.textContent = destination.name; const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>'; btn.addEventListener('click', () => deleteMaterialDestination(destination.id)); item.append(span, btn); div.appendChild(item); });
-            populateAdminDestinationFilter();
-        }
-        async function addMaterialDestination() {
-            const input = document.getElementById('newDestinationName'); const name = input.value.trim(); if (!name) return alert('Kullanım yeri adı giriniz');
-            const { error } = await db.from('material_destinations').insert([{ name, is_active: true }]); if (error) return alert('Hata: ' + error.message);
-            input.value = ''; await loadMaterialDestinationsList();
-        }
-        async function deleteMaterialDestination(id) {
-            if (!confirm('Kullanım yerini silmek istiyor musunuz? Eski kayıtlar silinmez.')) return;
-            const { error } = await db.from('material_destinations').update({ is_active: false }).eq('id', id); if (error) return alert('Silme hatası: ' + error.message);
-            await loadMaterialDestinationsList();
         }
         async function loadLocationsList() {
             const { data: locs } = await db.from('locations').select('*').order('name');

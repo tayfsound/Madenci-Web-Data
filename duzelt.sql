@@ -48,29 +48,3 @@ from pg_policies
 where schemaname = 'public'
   and tablename in ('categories','materials','locations')
 order by tablename, cmd;
-
--- 5) Admin kontrollü malzeme kullanım yerleri
-create table if not exists public.material_destinations (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique,
-  is_active boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-alter table public.material_destinations enable row level security;
-drop policy if exists material_destinations_select on public.material_destinations;
-drop policy if exists material_destinations_insert on public.material_destinations;
-drop policy if exists material_destinations_update on public.material_destinations;
-
-create policy material_destinations_select on public.material_destinations
-  for select to authenticated, anon
-  using (is_active = true or public.is_admin());
-
-create policy material_destinations_insert on public.material_destinations
-  for insert to authenticated
-  with check (public.is_admin());
-
-create policy material_destinations_update on public.material_destinations
-  for update to authenticated
-  using (public.is_admin())
-  with check (public.is_admin());
