@@ -342,7 +342,17 @@
             document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => { el.value = getTodayDate(); el.dispatchEvent(new Event('change')); });
             if (type === 'ore' && !document.querySelector('#oreLocationGroups .ore-location-group')) addOreLocationGroup();
             if (type === 'loder' && !document.querySelector('#loderLocationGroups .loder-location-group')) addLoderLocationGroup();
-            buildRealWizard(type);
+            if (type === 'material' && !document.querySelector('#materialRows .material-row')) addMaterialRow();
+            try {
+                buildRealWizard(type);
+            } catch (error) {
+                console.error('Wizard kurulamadı, klasik form açılıyor:', error);
+                const activeForm = document.getElementById('form-' + type);
+                activeForm.querySelector('.space-y-4')?.classList.remove('hidden');
+                activeForm.querySelector('button[onclick^="submitEntry"]')?.classList.remove('hidden');
+                activeForm.querySelector('.real-wizard')?.remove();
+                activeForm.querySelector('.glass')?.classList.remove('wizard-host');
+            }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
