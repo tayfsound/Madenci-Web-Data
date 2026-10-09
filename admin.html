@@ -41,6 +41,15 @@
         html, body { overflow-x: hidden; }
         #editEntryModal { overscroll-behavior: contain; }
         #editEntryModal > div { max-height: calc(100dvh - 2rem); overflow-y: auto; }
+        .date-wheel-trigger { display:flex; align-items:center; justify-content:space-between; width:100%; padding:.5rem .75rem; border:1px solid #334155; border-radius:.5rem; background:#1e293b; color:#fff; text-align:left; }
+        .date-wheel-trigger:focus { outline:none; border-color:#3b82f6; }
+        .date-wheel-panel { display:none; grid-template-columns:1fr 1.35fr 1fr; gap:.5rem; margin-top:.5rem; padding:.5rem; border:1px solid #334155; border-radius:.75rem; background:#0f172a; }
+        .date-wheel-panel.is-open { display:grid; }
+        .date-wheel-column { height:8.5rem; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; }
+        .date-wheel-column::-webkit-scrollbar { display:none; }
+        .date-wheel-option { height:2.25rem; display:flex; align-items:center; justify-content:center; scroll-snap-align:center; color:#64748b; font-size:.85rem; cursor:pointer; }
+        .date-wheel-option.is-selected { color:#fff; font-weight:700; background:#1e293b; border-radius:.5rem; }
+        .date-wheel-label { display:block; text-align:center; color:#64748b; font-size:.65rem; margin:.15rem 0 .3rem; }
         /* Keep report rows readable while preserving the same dark surface language as the form. */
         #appScreen .bg-slate-800 { background-color: #1e293b !important; color: #e2e8f0 !important; }
         #appScreen .bg-slate-800\/50 { background-color: rgba(30,41,59,.5) !important; color: #e2e8f0 !important; }
@@ -247,6 +256,55 @@
         let currentAdminData = [];
         let categories = [], materialsByCategory = {}, locations = [], drillingTypes = [], loaders = [];
         const BUILTIN_DRILLING_TYPE_NAMES = ['Ayna', 'Tavan'];
+        const DATE_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        let dateAudioContext;
+        function playDateClick() {
+            try {
+                dateAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = dateAudioContext.createOscillator();
+                const gain = dateAudioContext.createGain();
+                oscillator.frequency.value = 820; oscillator.type = 'sine';
+                gain.gain.setValueAtTime(.035, dateAudioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(.001, dateAudioContext.currentTime + .035);
+                oscillator.connect(gain); gain.connect(dateAudioContext.destination); oscillator.start(); oscillator.stop(dateAudioContext.currentTime + .04);
+            } catch (_) {}
+        }
+        function createDateWheel(input) {
+            if (input.dataset.wheelReady) return;
+            input.dataset.wheelReady = 'true'; input.classList.add('hidden');
+            const wrapper = document.createElement('div'); wrapper.className = 'date-wheel';
+            const trigger = document.createElement('button'); trigger.type = 'button'; trigger.className = 'date-wheel-trigger';
+            const icon = document.createElement('i'); icon.className = 'fas fa-calendar-alt text-slate-400';
+            const text = document.createElement('span'); trigger.append(text, icon);
+            const panel = document.createElement('div'); panel.className = 'date-wheel-panel';
+            const columns = {};
+            [['day','Gün'],['month','Ay'],['year','Yıl']].forEach(([key,label]) => {
+                const group = document.createElement('div'); const caption = document.createElement('span'); caption.className = 'date-wheel-label'; caption.textContent = label;
+                const column = document.createElement('div'); column.className = 'date-wheel-column'; column.dataset.part = key; group.append(caption,column); panel.appendChild(group); columns[key] = column;
+            });
+            wrapper.append(trigger,panel); input.after(wrapper);
+            const current = () => input.value || new Date().toISOString().slice(0,10);
+            function render() {
+                const [year,month,day] = current().split('-').map(Number); const maxDay = new Date(year, month, 0).getDate();
+                const values = { day: Array.from({length:maxDay},(_,i)=>i+1), month: DATE_MONTHS.map((name,i)=>({value:i+1,label:name})), year: Array.from({length:7},(_,i)=>year-3+i) };
+                Object.entries(values).forEach(([key,list]) => {
+                    const selected = key === 'day' ? day : key === 'month' ? month : year;
+                    columns[key].innerHTML = list.map(item => { const value = typeof item === 'object' ? item.value : item; const label = typeof item === 'object' ? item.label : item; return '<button type="button" class="date-wheel-option' + (value === selected ? ' is-selected' : '') + '" data-value="' + value + '">' + label + '</button>'; }).join('');
+                    const active = columns[key].querySelector('.is-selected'); if (active) columns[key].scrollTop = active.offsetTop - columns[key].clientHeight / 2 + active.offsetHeight / 2;
+                });
+                text.textContent = String(day).padStart(2,'0') + ' ' + DATE_MONTHS[month-1] + ' ' + year;
+            }
+            function update(key,value) {
+                const [oldYear,oldMonth,oldDay] = current().split('-').map(Number); const next = {day:oldDay,month:oldMonth,year:oldYear}; next[key] = Number(value);
+                next.day = Math.min(next.day, new Date(next.year, next.month, 0).getDate()); input.value = next.year + '-' + String(next.month).padStart(2,'0') + '-' + String(next.day).padStart(2,'0');
+                input.dispatchEvent(new Event('change', { bubbles:true })); render(); playDateClick();
+            }
+            trigger.addEventListener('click', () => { panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) render(); });
+            panel.addEventListener('click', event => { const option = event.target.closest('.date-wheel-option'); if (option) update(option.closest('.date-wheel-column').dataset.part, option.dataset.value); });
+            Object.values(columns).forEach(column => { let scrollTimer; column.addEventListener('scroll', () => { clearTimeout(scrollTimer); scrollTimer = setTimeout(() => { const center = column.scrollTop + column.clientHeight / 2; const option = [...column.querySelectorAll('.date-wheel-option')].sort((a,b) => Math.abs(a.offsetTop + a.offsetHeight / 2 - center) - Math.abs(b.offsetTop + b.offsetHeight / 2 - center))[0]; if (option && !option.classList.contains('is-selected')) update(column.dataset.part, option.dataset.value); }, 130); }); });
+            input.addEventListener('change', render); render();
+        }
+        function initDateWheelPickers() { document.querySelectorAll('input[type="date"]').forEach(createDateWheel); }
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -379,7 +437,8 @@
                 await loadDrillingTypes();
                 await loadLoaders();
                 const today = new Date().toISOString().split('T')[0];
-                document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+            document.querySelectorAll('input[type="date"]').forEach(el => el.value = today);
+                initDateWheelPickers();
                 loadDashboardStats();
                 if (isAdmin) loadAdminData();
             }
@@ -454,7 +513,7 @@
             const materialNames = [...new Set(periodStats.flatMap(period => Object.keys(period.stats.materials)))].sort((first, second) => first.localeCompare(second, 'tr'));
             const periodHeaders = periodStats.map(period => '<th class="text-right px-2 py-2 text-xs text-slate-400">' + period.label + '</th>').join('');
             const materialRows = materialNames.length ? materialNames.map(name => '<tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">' + name + '</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.materials[name] || 0) + '</td>').join('') + '</tr>').join('') : '<tr><td colspan="4" class="py-3 text-sm text-slate-500">Henüz malzeme kaydı yok</td></tr>';
-            const aynaCard = '<div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-yellow-300">Ayna Delgisi</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Rapor sayısı</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.aynaReports) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Cevher / Patar</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.aynaOre) + ' / ' + formatDashboardNumber(period.stats.aynaPatar) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Patlayıcı miktarı</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.explosives) + '</td>').join('') + '</tr></tbody></table></div>';
+            const aynaCard = '<div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-yellow-300">Ayna Delgisi</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Rapor sayısı</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.aynaReports) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Cevher / Patar</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.aynaOre) + ' / ' + formatDashboardNumber(period.stats.aynaPatar) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Malzeme Miktarı</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.explosives) + '</td>').join('') + '</tr></tbody></table></div>';
             document.getElementById('dashboardStats').innerHTML = '<div class="grid lg:grid-cols-2 gap-4"><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-purple-300">Loder Kovaları</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Cevher kovası</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.loaderOre) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Pasa kovası</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.loaderWaste) + '</td>').join('') + '</tr></tbody></table></div><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-orange-300">Lokomotif Vagonları</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Cevher vagonu</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.locomotiveOre) + '</td>').join('') + '</tr><tr class="border-t border-slate-800"><td class="py-2 pr-2 text-sm">Pasa vagonu</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.locomotiveWaste) + '</td>').join('') + '</tr></tbody></table></div><div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-green-300">Tavan Delgisi</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Toplam metraj</th>' + periodHeaders + '</tr></thead><tbody><tr><td class="py-2 pr-2 text-sm">Metre</td>' + periodStats.map(period => '<td class="text-right px-2 py-2 font-mono text-sm">' + formatDashboardNumber(period.stats.meters) + ' m</td>').join('') + '</tr></tbody></table></div>' + aynaCard + '<div class="glass rounded-xl p-5"><h4 class="font-semibold mb-3 text-blue-300">Malzeme Kullanımı</h4><table class="w-full"><thead><tr><th class="text-left px-2 py-2 text-xs text-slate-400">Ürün</th>' + periodHeaders + '</tr></thead><tbody>' + materialRows + '</tbody></table></div></div>';
         }
         async function loadDashboardStats() {
@@ -568,6 +627,7 @@
             if (!entry) return alert('Rapor bulunamadi.');
             document.getElementById('editEntryId').value = entry.id;
             document.getElementById('editEntryDate').value = entry.date;
+            document.getElementById('editEntryDate').dispatchEvent(new Event('change'));
             document.getElementById('editEntryType').value = entry.entry_type;
             populateEditLocationOptions(entry.location);
             editEntryDetails = { ...(entry.details || {}) };

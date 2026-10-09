@@ -21,6 +21,20 @@
         .slide-in { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         select, input { touch-action: manipulation; }
+        .date-wheel-trigger { display:flex; align-items:center; justify-content:space-between; width:100%; padding:.65rem .75rem; border:1px solid #334155; border-radius:.75rem; background:#1e293b; color:#fff; text-align:left; }
+        .date-wheel-trigger:focus { outline:none; border-color:#3b82f6; }
+        .date-wheel-panel { display:none; grid-template-columns:1fr 1.35fr 1fr; gap:.5rem; margin-top:.5rem; padding:.5rem; border:1px solid #334155; border-radius:.9rem; background:#0f172a; }
+        .date-wheel-panel.is-open { display:grid; }
+        .date-wheel-column { height:9.5rem; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; }
+        .date-wheel-column::-webkit-scrollbar { display:none; }
+        .date-wheel-option { height:2.5rem; display:flex; align-items:center; justify-content:center; scroll-snap-align:center; color:#64748b; font-size:.9rem; cursor:pointer; }
+        .date-wheel-option.is-selected { color:#fff; font-weight:700; background:#1e293b; border-radius:.6rem; }
+        .date-wheel-label { display:block; text-align:center; color:#64748b; font-size:.68rem; margin:.15rem 0 .35rem; }
+        .wizard-step { display:none; animation: fadeIn .2s ease-out; }
+        .wizard-step.is-active { display:block; }
+        .wizard-controls { display:flex; justify-content:space-between; gap:.75rem; margin-top:1.25rem; }
+        .wizard-controls button { flex:1; padding:.75rem 1rem; border-radius:.75rem; font-weight:600; }
+        .wizard-back { border:1px solid #475569; color:#cbd5e1; }
         @media (max-width: 520px) {
             .glass { border-radius: 1rem; }
             #formScreens .grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
@@ -191,6 +205,15 @@
         </div>
     </div>
 
+    <div id="successScreen" class="hidden max-w-md mx-auto px-4 py-10 text-center fade-in">
+        <div class="glass rounded-2xl p-7">
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/15 flex items-center justify-center"><i class="fas fa-check text-3xl text-emerald-400"></i></div>
+            <h2 class="text-xl font-bold mb-2">Kayıt başarıyla tamamlandı</h2>
+            <p class="text-sm text-slate-400 mb-6">Raporunuz sisteme kaydedildi.</p>
+            <div class="space-y-3"><button type="button" onclick="startNewForm()" class="btn-primary w-full py-3 rounded-xl font-semibold">Yeni Form Oluştur</button><button type="button" onclick="returnToHome()" class="w-full py-3 rounded-xl border border-slate-600 text-slate-300 font-semibold hover:bg-slate-800">Ana Sayfaya Dön</button></div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://cxvrcqkkxfblpxzynfya.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_HPU-8leLiqneq88NNRUR2Q_CINGpLzO';
@@ -209,6 +232,67 @@
             const today = new Date();
             return today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
         }
+
+        const DATE_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+        let dateAudioContext;
+        function playDateClick() {
+            try {
+                dateAudioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = dateAudioContext.createOscillator();
+                const gain = dateAudioContext.createGain();
+                oscillator.frequency.value = 820; oscillator.type = 'sine';
+                gain.gain.setValueAtTime(.035, dateAudioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(.001, dateAudioContext.currentTime + .035);
+                oscillator.connect(gain); gain.connect(dateAudioContext.destination); oscillator.start(); oscillator.stop(dateAudioContext.currentTime + .04);
+            } catch (_) {}
+        }
+        function createDateWheel(input) {
+            if (input.dataset.wheelReady) return;
+            input.dataset.wheelReady = 'true'; input.classList.add('hidden');
+            const wrapper = document.createElement('div'); wrapper.className = 'date-wheel';
+            const trigger = document.createElement('button'); trigger.type = 'button'; trigger.className = 'date-wheel-trigger';
+            const icon = document.createElement('i'); icon.className = 'fas fa-calendar-alt text-slate-400';
+            const text = document.createElement('span'); trigger.append(text, icon);
+            const panel = document.createElement('div'); panel.className = 'date-wheel-panel';
+            const columns = {};
+            [['day','Gün'],['month','Ay'],['year','Yıl']].forEach(([key,label]) => {
+                const group = document.createElement('div'); const caption = document.createElement('span'); caption.className = 'date-wheel-label'; caption.textContent = label;
+                const column = document.createElement('div'); column.className = 'date-wheel-column'; column.dataset.part = key; group.append(caption,column); panel.appendChild(group); columns[key] = column;
+            });
+            wrapper.append(trigger,panel); input.after(wrapper);
+            const current = () => input.value || getTodayDate();
+            function render() {
+                const [year,month,day] = current().split('-').map(Number);
+                const maxDay = new Date(year, month, 0).getDate();
+                const values = { day: Array.from({length:maxDay},(_,i)=>i+1), month: DATE_MONTHS.map((name,i)=>({value:i+1,label:name})), year: Array.from({length:7},(_,i)=>year-3+i) };
+                Object.entries(values).forEach(([key,list]) => {
+                    const selected = key === 'day' ? day : key === 'month' ? month : year;
+                    columns[key].innerHTML = list.map(item => { const value = typeof item === 'object' ? item.value : item; const label = typeof item === 'object' ? item.label : item; return '<button type="button" class="date-wheel-option' + (value === selected ? ' is-selected' : '') + '" data-value="' + value + '">' + label + '</button>'; }).join('');
+                    const active = columns[key].querySelector('.is-selected'); if (active) columns[key].scrollTop = active.offsetTop - columns[key].clientHeight / 2 + active.offsetHeight / 2;
+                });
+                text.textContent = String(day).padStart(2,'0') + ' ' + DATE_MONTHS[month-1] + ' ' + year;
+            }
+            function update(key,value) {
+                const [oldYear,oldMonth,oldDay] = current().split('-').map(Number); const next = {day:oldDay,month:oldMonth,year:oldYear}; next[key] = Number(value);
+                const maxDay = new Date(next.year, next.month, 0).getDate(); next.day = Math.min(next.day,maxDay);
+                input.value = next.year + '-' + String(next.month).padStart(2,'0') + '-' + String(next.day).padStart(2,'0'); render(); playDateClick();
+            }
+            trigger.addEventListener('click', () => { panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) render(); });
+            panel.addEventListener('click', event => { const option = event.target.closest('.date-wheel-option'); if (option) update(option.closest('.date-wheel-column').dataset.part, option.dataset.value); });
+            Object.values(columns).forEach(column => {
+                let scrollTimer;
+                column.addEventListener('scroll', () => {
+                    clearTimeout(scrollTimer);
+                    scrollTimer = setTimeout(() => {
+                        const center = column.scrollTop + column.clientHeight / 2;
+                        const option = [...column.querySelectorAll('.date-wheel-option')].sort((a,b) => Math.abs(a.offsetTop + a.offsetHeight / 2 - center) - Math.abs(b.offsetTop + b.offsetHeight / 2 - center))[0];
+                        if (option && !option.classList.contains('is-selected')) update(column.dataset.part, option.dataset.value);
+                    }, 130);
+                });
+            });
+            input.addEventListener('change', render); render();
+        }
+        function initDateWheelPickers() { document.querySelectorAll('input[type="date"]').forEach(createDateWheel); }
 
         const LEGACY_FIELD_LABELS = {
             atis_sayisi:  { label: 'Atis Sayisi',  type: 'number' },
@@ -232,11 +316,13 @@
             await loadDrillingTypes();
             await loadLoaders();
             document.querySelectorAll('input[type="date"]').forEach(el => el.value = getTodayDate());
+            initDateWheelPickers();
         }
 
         function showSelection() {
             document.getElementById('selectionScreen').classList.remove('hidden');
             document.getElementById('formScreens').classList.add('hidden');
+            document.getElementById('successScreen').classList.add('hidden');
             ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
             document.getElementById('d_type').value = '';
             document.getElementById('d_dynamicFields').innerHTML = '';
@@ -247,13 +333,34 @@
         function openForm(type) {
             document.getElementById('selectionScreen').classList.add('hidden');
             document.getElementById('formScreens').classList.remove('hidden');
+            document.getElementById('successScreen').classList.add('hidden');
             ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
             document.getElementById('form-' + type).classList.remove('hidden');
-            document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => el.value = getTodayDate());
+            document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => { el.value = getTodayDate(); el.dispatchEvent(new Event('change')); });
             if (type === 'ore' && !document.querySelector('#oreLocationGroups .ore-location-group')) addOreLocationGroup();
             if (type === 'loder' && !document.querySelector('#loderLocationGroups .loder-location-group')) addLoderLocationGroup();
+            setupWizard(type);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        let activeWizardType = '';
+        function setupWizard(type) {
+            const form = document.getElementById('form-' + type); if (!form) return;
+            const content = form.querySelector('.space-y-4'); if (!content) return;
+            const steps = Array.from(content.children).filter(el => !el.classList.contains('wizard-controls'));
+            steps.forEach(step => step.classList.add('wizard-step'));
+            let controls = content.querySelector('.wizard-controls');
+            if (!controls) { controls = document.createElement('div'); controls.className = 'wizard-controls'; controls.innerHTML = '<button type="button" class="wizard-back">Geri</button><button type="button" class="btn-primary wizard-next">Devam Et</button>'; content.appendChild(controls); }
+            let index = 0;
+            const submit = form.querySelector('button[onclick^="submitEntry"]');
+            const render = () => { steps.forEach((step,i) => step.classList.toggle('is-active', i === index)); controls.querySelector('.wizard-back').classList.toggle('invisible', index === 0); controls.querySelector('.wizard-next').classList.toggle('hidden', index === steps.length - 1); if (submit) submit.classList.toggle('hidden', index !== steps.length - 1); };
+            controls.querySelector('.wizard-back').onclick = () => { if (index > 0) { index--; render(); } else showSelection(); };
+            controls.querySelector('.wizard-next').onclick = () => { if (index < steps.length - 1) { index++; render(); } };
+            render(); activeWizardType = type;
+        }
+        function showSuccess(type) { activeWizardType = type; document.getElementById('formScreens').classList.add('hidden'); document.getElementById('selectionScreen').classList.add('hidden'); document.getElementById('successScreen').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
+        function startNewForm() { showSelection(); }
+        function returnToHome() { showSelection(); }
 
         async function loadCategoriesAndMaterials() {
             const { data: cats } = await db.from('categories').select('*').order('name');
@@ -513,7 +620,7 @@
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
                 const { error } = await db.from('entries').insert(payload);
                 if (error) alert('Hata: ' + error.message);
-                else { document.getElementById('materialRows').innerHTML = ''; alert(payload.length + ' malzeme kaydı eklendi!'); }
+                else { document.getElementById('materialRows').innerHTML = ''; showSuccess(type); }
                 return;
             } else if (type === 'ore') {
                 const rows = [];
@@ -532,7 +639,7 @@
                 if (!date || !rows.length || rows.some(row => !row.location)) { alert('Tarih, her lokasyon ve en az bir miktar zorunludur.'); return; }
                 const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'ore', location: row.location, details: row.details })));
                 if (error) alert('Hata: ' + error.message);
-                else { document.getElementById('oreLocationGroups').innerHTML = ''; addOreLocationGroup(); alert(rows.length + ' hareket kaydedildi!'); }
+                else { document.getElementById('oreLocationGroups').innerHTML = ''; addOreLocationGroup(); showSuccess(type); }
                 return;
             } else if (type === 'loder') {
                 const date = document.getElementById('ld_date').value;
@@ -549,7 +656,7 @@
                 if (!date || !shift || !rows.length || rows.some(row => !row.location || !row.details.loader_id || !row.details.hours)) { alert('Tarih, vardiya, her çalışma alanı, kepçe ve çalışma saati zorunludur.'); return; }
                 const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'loder', location: row.location, details: row.details })));
                 if (error) alert('Hata: ' + error.message);
-                else { document.getElementById('loderLocationGroups').innerHTML = ''; addLoderLocationGroup(); alert(rows.length + ' loder kaydı eklendi!'); }
+                else { document.getElementById('loderLocationGroups').innerHTML = ''; addLoderLocationGroup(); showSuccess(type); }
                 return;
             }
 
@@ -558,7 +665,7 @@
             if (error) alert('Hata: ' + error.message);
             else {
                 document.querySelectorAll('.input-dark').forEach(el => { if (el.type !== 'date' && el.tagName !== 'SELECT') el.value = ''; });
-                alert('Kaydedildi!');
+                showSuccess(type);
             }
         }
 
