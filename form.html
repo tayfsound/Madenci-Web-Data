@@ -24,8 +24,10 @@
         .date-wheel-trigger { display:flex; align-items:center; justify-content:space-between; width:100%; padding:.65rem .75rem; border:1px solid #334155; border-radius:.75rem; background:#1e293b; color:#fff; text-align:left; }
         .date-wheel-trigger:focus { outline:none; border-color:#3b82f6; }
         .date-wheel-panel { display:none; grid-template-columns:1fr 1.35fr 1fr; gap:.5rem; margin-top:.5rem; padding:.5rem; border:1px solid #334155; border-radius:.9rem; background:#0f172a; }
-        .date-wheel-panel.is-open { display:grid; }
-        .date-wheel-column { height:9.5rem; overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; }
+        .date-wheel-panel.is-open { display:grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); }
+        .date-wheel-column { --wheel-row: 2.75rem; position: relative; padding-block: calc((var(--wheel-height) - var(--wheel-row)) / 2); box-sizing: border-box; overflow-anchor: none; }
+        .date-wheel-column .date-wheel-option { height: var(--wheel-row); width: 100%; flex-shrink: 0; }
+        .date-wheel-column { --wheel-height: 9.5rem; height:var(--wheel-height); overflow-y:auto; overscroll-behavior:contain; scroll-snap-type:y mandatory; scrollbar-width:none; }
         .date-wheel-column::-webkit-scrollbar { display:none; }
         .date-wheel-option { height:2.5rem; display:flex; align-items:center; justify-content:center; scroll-snap-align:center; color:#64748b; font-size:.9rem; cursor:pointer; }
         .date-wheel-option.is-selected { color:#fff; font-weight:700; background:#1e293b; border-radius:.6rem; }
@@ -281,17 +283,43 @@
                 const values = { day: Array.from({length:maxDay},(_,i)=>i+1), month: DATE_MONTHS.map((name,i)=>({value:i+1,label:name})) };
                 Object.entries(values).forEach(([key,list]) => {
                     const selected = key === 'day' ? day : month;
-                    columns[key].innerHTML = list.map(item => { const value = typeof item === 'object' ? item.value : item; const label = typeof item === 'object' ? item.label : item; return '<button type="button" class="date-wheel-option' + (value === selected ? ' is-selected' : '') + '" data-value="' + value + '">' + label + '</button>'; }).join('');
-                    const active = columns[key].querySelector('.is-selected'); if (active) columns[key].scrollTop = active.offsetTop - columns[key].clientHeight / 2 + active.offsetHeight / 2;
+                    const column = columns[key];
+                    const previous = column.querySelector('.is-selected')?.dataset.value;
+                    // Keep existing buttons and the untouched column's scroll position.
+                    if (column.children.length !== list.length) {
+                        column.innerHTML = list.map(item => { const value = typeof item === 'object' ? item.value : item; const label = typeof item === 'object' ? item.label : item; return '<button type="button" class="date-wheel-option" data-value="' + value + '">' + label + '</button>'; }).join('');
+                    }
+                    column.querySelectorAll('.date-wheel-option').forEach(option => {
+                        const isSelected = Number(option.dataset.value) === selected;
+                        option.classList.toggle('is-selected', isSelected);
+                        option.setAttribute('aria-pressed', String(isSelected));
+                    });
+                    if (panel.classList.contains('is-open') && (previous !== String(selected) || render.centerAll || render.centerKey === key)) {
+                        const active = column.querySelector('.is-selected');
+                        // Coordinates relative to this scroll container, not the page.
+                        const itemRect = active.getBoundingClientRect();
+                        const columnRect = column.getBoundingClientRect();
+                        column.scrollTop += itemRect.top - columnRect.top - column.clientTop
+                            + itemRect.height / 2 - column.clientHeight / 2;
+                    }
                 });
                 text.textContent = String(day).padStart(2,'0') + ' ' + DATE_MONTHS[month-1] + ' ' + year;
+                render.centerKey = null;
             }
             function update(key,value) {
+                render.centerKey = key;
                 const [oldYear,oldMonth,oldDay] = current().split('-').map(Number); const next = {day:oldDay,month:oldMonth,year:new Date().getFullYear()}; next[key] = Number(value);
                 const maxDay = new Date(next.year, next.month, 0).getDate(); next.day = Math.min(next.day,maxDay);
                 input.value = next.year + '-' + String(next.month).padStart(2,'0') + '-' + String(next.day).padStart(2,'0'); render(); playDateClick();
             }
-            trigger.addEventListener('click', () => { panel.classList.toggle('is-open'); if (panel.classList.contains('is-open')) render(); });
+            trigger.addEventListener('click', () => {
+                panel.classList.toggle('is-open');
+                if (panel.classList.contains('is-open')) {
+                    render.centerAll = true;
+                    render();
+                    render.centerAll = false;
+                }
+            });
             panel.addEventListener('click', event => { const option = event.target.closest('.date-wheel-option'); if (option) update(option.closest('.date-wheel-column').dataset.part, option.dataset.value); });
             input.addEventListener('change', render); render();
         }
