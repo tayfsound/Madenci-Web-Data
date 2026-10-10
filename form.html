@@ -365,6 +365,8 @@
             host.classList.add('wizard-host');
             original.classList.add('hidden'); submit.classList.add('hidden');
             const shell = document.createElement('div'); shell.className = 'real-wizard'; shell.dataset.type = type;
+            // Keep moved fields connected for ID lookups throughout setup.
+            host.appendChild(shell);
             const progress = document.createElement('div'); progress.className = 'text-xs text-slate-500 text-center mb-3'; shell.appendChild(progress);
             const steps = [];
             const field = (title, id, subtitle) => { const source = document.getElementById(id); if (!source) return null; source.required = true; const box = document.createElement('div'); box.className = 'space-y-2'; const label = document.createElement('label'); label.className = 'block text-sm text-slate-300'; label.textContent = title; box.append(label, source.type === 'date' && source.nextElementSibling?.classList.contains('date-wheel') ? source.nextElementSibling : source); if (subtitle) { const hint = document.createElement('p'); hint.className = 'text-xs text-slate-500'; hint.textContent = subtitle; box.append(hint); } return box; };
@@ -411,14 +413,14 @@
         function returnToHome() { showSelection(); }
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape') {
-                const activeForm = document.querySelector('#formScreens:not(.hidden) .real-wizard');
+                const activeForm = document.querySelector('#formScreens:not(.hidden) > div:not(.hidden) .real-wizard');
                 if (activeForm) { event.preventDefault(); activeForm.querySelector('.wizard-back')?.click(); }
                 return;
             }
             if (event.key !== 'Enter' || event.shiftKey || event.ctrlKey || event.altKey || event.isComposing) return;
             const target = event.target;
             if (target.matches('textarea, button, .date-wheel-option') || target.closest('.date-wheel-column')) return;
-            const activeForm = document.querySelector('#formScreens:not(.hidden) .real-wizard');
+            const activeForm = document.querySelector('#formScreens:not(.hidden) > div:not(.hidden) .real-wizard');
             if (!activeForm) return;
             event.preventDefault();
             const next = activeForm.querySelector('.real-wizard-footer button.btn-primary:not(.hidden)');
@@ -634,6 +636,7 @@
             row.className = 'material-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
             row.innerHTML = '<select class="m-cat input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select><select class="m-name input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select><input type="number" class="m-qty input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Miktar"><select class="m-unit input-dark sm:col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Ad</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option></select><div class="sm:col-span-2"><label class="m-loader-label hidden block text-[10px] text-orange-300 mb-1">Loder</label><select class="m-loader input-dark hidden w-full px-1 py-2 rounded-lg text-sm"><option value="">Loder no</option></select></div><button type="button" class="text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
             const catSel = row.querySelector('.m-cat');
+            const matSel = row.querySelector('.m-name');
             categories.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; catSel.appendChild(o); });
             const loaderSel = row.querySelector('.m-loader'); loaders.forEach(loader => { const o = document.createElement('option'); o.value = loader.id; o.textContent = loader.name; loaderSel.appendChild(o); });
             catSel.addEventListener('change', function() {
