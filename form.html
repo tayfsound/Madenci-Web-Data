@@ -7,6 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="dynamic-forms.css">
+    <script src="dynamic-forms.js"></script>
+    <script src="form-portal.js"></script>
+    <script src="loader-photo.js"></script>
     <style>
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; -webkit-tap-highlight-color: transparent; }
         .glass { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
@@ -21,6 +25,13 @@
         .slide-in { animation: slideIn 0.3s ease-out; }
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         select, input { touch-action: manipulation; }
+        #materialRows .material-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; padding: 1rem; border: 1px solid #334155; border-radius: .75rem; }
+        #materialRows .material-row > * { grid-column: auto; min-width: 0; }
+        #materialRows .material-row select, #materialRows .material-row input { width: 100%; min-height: 44px; font-size: 16px; }
+        #materialRows .m-unit { padding-inline: .75rem 2rem; }
+        @media (max-width: 420px) {
+            #materialRows .material-row { grid-template-columns: minmax(0, 1fr); }
+        }
         .date-wheel-trigger { display:flex; align-items:center; justify-content:space-between; width:100%; padding:.65rem .75rem; border:1px solid #334155; border-radius:.75rem; background:#1e293b; color:#fff; text-align:left; }
         .date-wheel-trigger:focus { outline:none; border-color:#3b82f6; }
         .date-wheel-panel { display:none; grid-template-columns:1fr 1.35fr 1fr; gap:.5rem; margin-top:.5rem; padding:.5rem; border:1px solid #334155; border-radius:.9rem; background:#0f172a; }
@@ -111,6 +122,7 @@
         </div>
     </div>
 
+    <div id="dynamicFormScreen" class="mf" hidden></div>
     <!-- FORM SCREENS -->
     <div id="formScreens" class="hidden max-w-2xl mx-auto px-4 py-4 slide-in">
         <!-- Back button -->
@@ -210,9 +222,11 @@
                     </div>
                     <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="ld_date" class="input-dark w-full px-3 py-2.5 rounded-xl"></div>
                     <div><label class="block text-xs text-slate-400 mb-1.5">Vardiya</label><select id="ld_shift" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option><option value="gunduz">Gunduz</option><option value="gece">Gece</option></select></div>
+                    <div><label class="block text-xs text-slate-400 mb-1.5">Loder</label><select id="ld_loader" class="ld-loader input-dark w-full px-3 py-2.5 rounded-xl" onchange="loaderPhoto?.reset()"><option value="">Seç</option></select></div>
                     <div class="flex items-end"><button type="button" onclick="addLoderLocationGroup()" class="w-full py-2.5 rounded-xl border border-purple-500/50 text-purple-400 hover:bg-purple-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Çalışma Alanı Ekle</button></div>
                     <div id="loderLocationGroups" class="space-y-4"></div>
-                    <div class="text-xs text-slate-500">Her çalışma alanı için kendi loder bilgilerini girin.</div>
+                    <div class="text-xs text-slate-500">Bu rapor seçilen tek loder içindir; birden fazla çalışma alanı ekleyebilirsiniz.</div>
+                    <div id="ld_meterPhoto"></div>
                     <textarea id="ld_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('loder')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
@@ -351,6 +365,8 @@
         }
 
         function showSelection() {
+            document.getElementById('dynamicFormScreen').hidden = true;
+            MadenciPortal.reload();
             document.getElementById('selectionScreen').classList.remove('hidden');
             document.getElementById('formScreens').classList.add('hidden');
             document.getElementById('successScreen').classList.add('hidden');
@@ -382,6 +398,22 @@
                 activeForm.querySelector('.glass')?.classList.remove('wizard-host');
             }
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        let loaderPhoto = null;
+        function validateWizardStep(step) {
+            if (step.querySelector('#ld_meterPhoto')) {
+                const issue = loaderPhoto?.validate() || (!loaderPhoto ? 'Fotoğraf alanı yüklenemedi.' : '');
+                if (issue) { alert(issue); return false; }
+            }
+            for (const input of step.querySelectorAll('input, select, textarea')) {
+                if (!input.disabled && !input.checkValidity()) {
+                    input.reportValidity();
+                    input.focus();
+                    return false;
+                }
+            }
+            return true;
         }
 
         let activeWizardType = '';
@@ -428,12 +460,15 @@
                 add('Çalışma alanları', 'Lokasyon ve cevher/pasa hareketlerini girin.', [document.getElementById('oreLocationGroups'), document.querySelector('#form-ore button[onclick="addOreLocationGroup()"]')]);
             } else if (type === 'loder') {
                 add('Vardiya', 'Çalışılan vardiyayı seçin.', [field('Vardiya', 'ld_shift')]);
-                add('Çalışma alanları', 'Lokasyon, kepçe ve çalışma saatlerini girin.', [document.getElementById('loderLocationGroups'), document.querySelector('#form-loder button[onclick="addLoderLocationGroup()"]')]);
+                add('Loder', 'Bu raporun ve fotoğrafın ait olduğu loderi seçin.', [field('Loder', 'ld_loader')]);
+                add('Çalışma alanları', 'Lokasyon ve kova bilgilerini girin.', [document.getElementById('loderLocationGroups'), document.querySelector('#form-loder button[onclick="addLoderLocationGroup()"]')]);
+                const photoHost = document.getElementById('ld_meterPhoto');
+                if (!loaderPhoto) loaderPhoto = LoaderPhoto.mount(photoHost);
+                add('Vardiya sonu sayaç fotoğrafı', 'Tek fotoğraf yükleyin. Saat girişi veya hesaplama yapılmaz.', [photoHost]);
             }
-            add('Açıklama', 'İsterseniz bu rapora manuel bir not ekleyin.', [field('Açıklama', prefix + '_description')]);
             document.getElementById(prefix + '_description').required = false;
             const footer = document.createElement('div'); footer.className = 'real-wizard-footer'; const back = document.createElement('button'); back.type = 'button'; back.className = 'wizard-back'; back.textContent = 'Geri'; const next = document.createElement('button'); next.type = 'button'; next.className = 'btn-primary'; next.textContent = 'Devam Et'; footer.append(back,next); shell.appendChild(footer); form.querySelector('.glass').appendChild(shell); shell.appendChild(submit);
-            let index = 0; const render = () => { steps.forEach((step,i) => { step.classList.toggle('is-active', i === index); step.setAttribute('aria-hidden', i === index ? 'false' : 'true'); }); progress.textContent = (index + 1) + ' / ' + steps.length; back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
+            let index = 0; const render = () => { steps.forEach((step,i) => { step.classList.toggle('is-active', i === index); step.setAttribute('aria-hidden', i === index ? 'false' : 'true'); }); progress.textContent = (index + 1) + ' / ' + steps.length; back.classList.toggle('invisible', index === 0); next.classList.toggle('hidden', index === steps.length - 1); submit.classList.toggle('hidden', index !== steps.length - 1); }; back.onclick = () => { if (index > 0) index--; else showSelection(); render(); }; next.onclick = () => { if (!validateWizardStep(steps[index])) return; if (index < steps.length - 1) index++; render(); }; shell._render = render; shell._reset = () => { index = 0; render(); }; render(); wizardBuilt[type] = true;
         }
         function showWizardStep(type, index) { const shell = document.querySelector('.real-wizard[data-type="' + type + '"]'); if (shell?._reset) shell._reset(); }
         function showSuccess(type) { activeWizardType = type; document.getElementById('formScreens').classList.add('hidden'); document.getElementById('selectionScreen').classList.add('hidden'); document.getElementById('successScreen').classList.remove('hidden'); window.scrollTo({top:0, behavior:'smooth'}); }
@@ -526,10 +561,8 @@
             const group = document.createElement('div');
             group.className = 'loder-location-group rounded-xl border border-slate-700/50 border-l-4 border-l-purple-500 p-4 bg-slate-800/30';
             group.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="block text-sm font-medium text-purple-400">Çalışma Alanı</label><button type="button" class="remove-loder-location hidden text-red-400 hover:text-red-300 text-sm" title="Çalışma alanını kaldır"><i class="fas fa-trash"></i></button></div>' +
-                '<div class="grid grid-cols-2 gap-3 mb-4"><div><label class="block text-xs text-slate-400 mb-1.5">Kepçe No</label><select class="ld-loader input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div><div><label class="block text-xs text-slate-400 mb-1.5">Çalışma Alanı</label><select class="ld-location input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Sec</option></select></div></div>' +
-                '<div class="mb-4"><label class="block text-xs text-slate-400 mb-1.5">Çalışma Saati</label><input type="number" step="0.5" class="ld-hours input-dark w-full px-3 py-2.5 rounded-xl" placeholder="7.5"></div>' +
+                '<div class="mb-4"><label class="block text-xs text-slate-400 mb-1.5">Çalışma Alanı</label><select required class="ld-location input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Seç</option></select></div>' +
                 '<div class="grid grid-cols-2 gap-3"><div><label class="block text-xs text-slate-400 mb-1.5">Cevher Kova</label><input type="number" min="0" class="ld-cevher input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div><div><label class="block text-xs text-slate-400 mb-1.5">Pasa Kova</label><input type="number" min="0" class="ld-pasa input-dark w-full px-3 py-2.5 rounded-xl" placeholder="0"></div></div>';
-            fillLoderSelect(group.querySelector('.ld-loader'));
             fillOreLocationSelect(group.querySelector('.ld-location'));
             group.querySelector('.remove-loder-location').addEventListener('click', () => { group.remove(); updateLoderLocationRemoveButtons(); });
             container.appendChild(group);
@@ -581,7 +614,7 @@
             const container = document.getElementById('d_aynaRows'); if (!container) return;
             const explosives = JSON.parse(document.getElementById('d_dynamicFields').dataset.explosives || '[]');
             const row = document.createElement('div'); row.className = 'ayna-report-row rounded-xl border border-slate-700/70 border-l-4 border-l-yellow-500 p-3';
-            row.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="text-sm font-medium text-yellow-300">Ayna Raporu</label><button type="button" class="remove-ayna-row text-red-400 hover:text-red-300 text-sm" title="Raporu kaldır"><i class="fas fa-trash"></i></button></div><label class="block text-xs text-slate-400 mb-1.5">Malzeme tipi</label><select class="d-ayna-material-type input-dark w-full px-3 py-2.5 rounded-xl mb-3"><option value="">Seç</option><option value="cevher">Cevher</option><option value="patar">Pasa</option></select><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div class="d-ayna-explosives space-y-2">' + (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-ayna-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') + '</div>';
+            row.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="text-sm font-medium text-yellow-300">Ayna Raporu</label><button type="button" class="remove-ayna-row text-red-400 hover:text-red-300 text-sm" title="Raporu kaldır"><i class="fas fa-trash"></i></button></div><label class="block text-xs text-slate-400 mb-1.5">Malzeme tipi</label><select required aria-label="Malzeme tipi" class="d-ayna-material-type input-dark w-full px-3 py-2.5 rounded-xl mb-3"><option value="">Seç</option><option value="cevher">Cevher</option><option value="patar">Pasa</option></select><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div class="d-ayna-explosives space-y-2">' + (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-ayna-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') + '</div>';
             row.querySelector('.remove-ayna-row').addEventListener('click', () => { if (container.children.length > 1) { row.remove(); updateAynaRemoveButtons(); } });
             container.appendChild(row); updateAynaRemoveButtons();
         }
@@ -662,7 +695,7 @@
         function addMaterialRow(data) {
             const row = document.createElement('div');
             row.className = 'material-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
-            row.innerHTML = '<select class="m-cat input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select><select class="m-name input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select><input type="number" class="m-qty input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Miktar"><select class="m-unit input-dark sm:col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Ad</option><option value="kg">Kg</option><option value="lt">Lt</option><option value="mt">Mt</option></select><div class="sm:col-span-2"><label class="m-loader-label hidden block text-[10px] text-orange-300 mb-1">Loder</label><select class="m-loader input-dark hidden w-full px-1 py-2 rounded-lg text-sm"><option value="">Loder no</option></select></div><button type="button" class="text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
+            row.innerHTML = '<select class="m-cat input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select><select class="m-name input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select><input type="number" class="m-qty input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Miktar"><select aria-label="Birim" class="m-unit input-dark sm:col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Adet</option><option value="kg">Kilogram (kg)</option><option value="lt">Litre (lt)</option><option value="mt">Metre (mt)</option></select><div class="sm:col-span-2"><label class="m-loader-label hidden block text-[10px] text-orange-300 mb-1">Loder</label><select class="m-loader input-dark hidden w-full px-1 py-2 rounded-lg text-sm"><option value="">Loder no</option></select></div><button type="button" class="text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
             const catSel = row.querySelector('.m-cat');
             const matSel = row.querySelector('.m-name');
             categories.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; catSel.appendChild(o); });
@@ -759,19 +792,26 @@
             } else if (type === 'loder') {
                 const date = document.getElementById('ld_date').value;
                 const shift = document.getElementById('ld_shift').value;
-                const rows = [];
-                document.querySelectorAll('#loderLocationGroups .loder-location-group').forEach(group => {
-                    const loaderId = group.querySelector('.ld-loader').value;
-                    const location = group.querySelector('.ld-location').value;
-                    const hours = group.querySelector('.ld-hours').value.trim();
-                    const loader = loaders.find(item => item.id === loaderId);
-                    if (!loader && !location && !hours) return;
-                    rows.push({ date, location, details: { ...reporter, description: document.getElementById('ld_description').value.trim(), loader_id: loaderId, loader: loader ? loader.name : '', hours, cevher_kovasi: group.querySelector('.ld-cevher').value.trim() || '0', pasa_kovasi: group.querySelector('.ld-pasa').value.trim() || '0', shift } });
-                });
-                if (!date || !shift || !rows.length || rows.some(row => !row.location || !row.details.loader_id || !row.details.hours)) { alert('Tarih, vardiya, her çalışma alanı, kepçe ve çalışma saati zorunludur.'); return; }
-                const { error } = await db.from('entries').insert(rows.map(row => ({ date: row.date, entry_type: 'loder', location: row.location, details: row.details })));
-                if (error) alert('Hata: ' + error.message);
-                else { document.getElementById('loderLocationGroups').innerHTML = ''; addLoderLocationGroup(); showSuccess(type); }
+                const loaderId = document.getElementById('ld_loader').value;
+                const rows = Array.from(document.querySelectorAll('#loderLocationGroups .loder-location-group')).map(group => ({
+                    location: group.querySelector('.ld-location').value,
+                    cevher_kovasi: group.querySelector('.ld-cevher').value.trim() || '0',
+                    pasa_kovasi: group.querySelector('.ld-pasa').value.trim() || '0'
+                }));
+                if (!date || !shift || !loaderId || !rows.length || rows.some(row => !row.location || !/^[0-9]{1,7}$/.test(row.cevher_kovasi) || !/^[0-9]{1,7}$/.test(row.pasa_kovasi))) { alert('Tarih, vardiya, loder ve çalışma alanlarını seçin; kova sayılarını negatif olmayan tam sayı girin.'); return; }
+                const issue = loaderPhoto?.validate() || (!loaderPhoto ? 'Fotoğraf alanı yüklenemedi.' : '');
+                if (issue) { alert(issue); return; }
+                const form = document.getElementById('form-loder');
+                if (form.dataset.saving === 'true') return;
+                form.dataset.saving = 'true'; form.inert = true;
+                const save = form.querySelector('button[onclick^="submitEntry"]');
+                const previousLabel = save.textContent; save.textContent = 'Fotoğraf ve rapor kaydediliyor…';
+                try {
+                    await loaderPhoto.submit(db, {first_name:firstName,last_name:lastName,date,shift,loader_id:loaderId,description:document.getElementById('ld_description').value.trim(),locations:rows});
+                    loaderPhoto.reset(); document.getElementById('ld_loader').value = '';
+                    document.getElementById('loderLocationGroups').innerHTML = ''; addLoderLocationGroup(); showSuccess(type);
+                } catch (error) { alert(error.message); }
+                finally { form.inert = false; form.dataset.saving = 'false'; save.textContent = previousLabel; }
                 return;
             }
 
@@ -784,6 +824,10 @@
             }
         }
 
+        const dynamicCards = document.createElement('div');
+        dynamicCards.id = 'dynamicFormCards'; dynamicCards.className = 'mf mf-portal';
+        document.getElementById('selectionScreen').appendChild(dynamicCards);
+        MadenciPortal.init(db);
         initApp();
     </script>
 </body>

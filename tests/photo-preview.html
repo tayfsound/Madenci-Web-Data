@@ -1,0 +1,13 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sayaç fotoğrafı · Yerel test</title><link rel="stylesheet" href="../dynamic-forms.css"><style>body{background:#0f172a;margin:0;padding:16px;color:#e2e8f0;font-family:system-ui}.hidden{display:none}main{max-width:640px;margin:auto}button,input{font:inherit}#photo label{display:flex;align-items:center;gap:10px;margin:16px 0}#photo input[type=checkbox]{width:20px}#photo button{padding:12px;margin:5px;border:1px solid #64748b;border-radius:8px;background:#1e293b;color:white}</style></head><body><main class="mf">
+<h2>Vardiya sonu sayaç fotoğrafı</h2><p>YEREL TEST: Hiçbir dosya sunucuya gönderilmez. Kendi fotoğrafınızı seçebilir veya örnek sayaçla deneyebilirsiniz.</p>
+<button id="sample" type="button">Örnek sayaç fotoğrafıyla dene</button><div id="photo"></div><button id="save" type="button">Kaydetmeyi test et (yerel)</button><p id="result" role="status"></p>
+</main><script src="../loader-photo.js"></script><script>
+const widget=LoaderPhoto.mount(document.getElementById('photo'));
+document.getElementById('sample').onclick=()=>{
+ const c=document.createElement('canvas');c.width=4000;c.height=2200;const x=c.getContext('2d');x.fillStyle='#ddd';x.fillRect(0,0,4000,2200);x.fillStyle='#222';x.fillRect(250,400,3500,1400);x.fillStyle='#ddd';x.font='bold 420px monospace';x.fillText('012345.6 h',550,1250);x.font='100px sans-serif';x.fillText('YEREL TEST SAYACI',550,1550);
+ c.toBlob(b=>{const dt=new DataTransfer();dt.items.add(new File([b],'sample.jpg',{type:'image/jpeg'}));const input=document.querySelector('#photo input[type=file]');input.files=dt.files;input.dispatchEvent(new Event('change'));},'image/jpeg',.98);
+};
+document.getElementById('save').onclick=async()=>{
+ try{await widget.submit({functions:{invoke:async(name,{body})=>{document.getElementById('result').textContent='Yerel kontrol başarılı: '+Math.round(body.get('photo').size/1024)+' KB, tek JPEG fotoğraf. Sunucuya gönderilmedi.';return {data:{ok:true}};}}},{first_name:'Test',last_name:'Kullanıcı'});}catch(e){document.getElementById('result').textContent=e.message;}
+};
+</script></body></html>

@@ -11,6 +11,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="dynamic-forms.css">
+    <script src="dynamic-forms.js"></script>
+    <script src="form-builder.js"></script>
+    <script src="loader-photo.js"></script>
     <style>
         body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; }
         .glass { background: rgba(30, 41, 59, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
@@ -127,6 +131,7 @@
                     <span id="userName" class="text-sm text-slate-400 hidden sm:inline"></span>
                     <button onclick="showSection('dashboard')" class="p-2 rounded-lg hover:bg-slate-700 transition" title="Dashboard"><i class="fas fa-home"></i></button>
                     <button id="adminBtn" onclick="showSection('admin')" class="p-2 rounded-lg hover:bg-slate-700 transition hidden" title="Admin Panel"><i class="fas fa-shield-alt text-yellow-500"></i></button>
+                    <button id="formBuilderBtn" onclick="showSection('builder')" class="hidden p-2 rounded-lg hover:bg-slate-700" title="Form oluşturucu">Formlar</button>
                     <button onclick="handleLogout()" class="p-2 rounded-lg hover:bg-red-900/30 text-red-400 transition" title="Cikis"><i class="fas fa-sign-out-alt"></i></button>
                 </div>
             </div>
@@ -134,6 +139,7 @@
 
         <div class="max-w-7xl mx-auto px-4 py-6">
 
+            <div id="builderSection" class="hidden"></div>
             <div id="dashboardSection" class="fade-in">
                 <div class="grid grid-cols-1 gap-6">
                     <div class="w-full space-y-6">
@@ -463,6 +469,7 @@
                 if (profile && profile.is_admin === true) {
                     isAdmin = true;
                     document.getElementById('adminBtn').classList.remove('hidden');
+                    document.getElementById('formBuilderBtn').classList.remove('hidden');
                     document.getElementById('dashAdminBtn').classList.remove('hidden');
                 }
                 await loadCategoriesAndMaterials();
@@ -481,13 +488,15 @@
         });
 
         function showSection(section) {
-            ['dashboard', 'admin'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
-            if (section === 'admin' && !isAdmin) {
+            if (!document.getElementById('builderSection').classList.contains('hidden') && !MadenciBuilder.canLeave()) return;
+            ['dashboard', 'admin', 'builder'].forEach(s => { document.getElementById(s + 'Section').classList.add('hidden'); });
+            if ((section === 'admin' || section === 'builder') && !isAdmin) {
                 showAuthMessage('Bu hesap admin yetkisine sahip değil.', true);
                 document.getElementById('dashboardSection').classList.remove('hidden');
                 return;
             }
             document.getElementById(section + 'Section').classList.remove('hidden');
+            if (section === 'builder') MadenciBuilder.open(db, document.getElementById('builderSection'));
             if (section === 'admin') {
                 loadAdminData(); loadCategoriesList(); loadLocationsList(); loadLoadersList();
                 const select = document.getElementById('materialCategorySelect');
@@ -586,9 +595,9 @@
                 return `
                     <tr class="hover:bg-slate-800/50">
                         <td class="py-3 px-2 whitespace-nowrap">${group.date}</td>
-                        <td class="py-3 px-2 text-sm text-slate-300">${getReporterName(firstEntry)}</td>
-                        <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${getReportTypeLabel(firstEntry)}</span></td>
-                        <td class="py-3 px-2 font-medium">${locations}</td>
+                        <td class="py-3 px-2 text-sm text-slate-300">${escapeReportText(getReporterName(firstEntry))}</td>
+                        <td class="py-3 px-2"><span class="px-2 py-0.5 rounded text-xs bg-slate-700">${escapeReportText(getReportTypeLabel(firstEntry))}</span></td>
+                        <td class="py-3 px-2 font-medium">${escapeReportText(locations)}</td>
                         <td class="py-3 px-2 text-slate-300"><div class="detail-content">${group.entries.map(entry => formatDetailsHtml(entry)).join('<div class="detail-entry-separator"></div>')}</div></td>
                         <td class="py-3 px-2 text-right whitespace-nowrap">${actions}</td>
                     </tr>
@@ -649,7 +658,8 @@
             } else if (entryType === 'ore') {
                 html += '<div><label class="block text-sm text-slate-400 mb-1">Hareket</label><select data-edit-key="type" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"><option value="cevher"' + (details.type === 'cevher' ? ' selected' : '') + '>Cevher</option><option value="pasa"' + (details.type === 'pasa' ? ' selected' : '') + '>Pasa</option></select></div>' + editField('Miktar', 'quantity', details.quantity || '', 'number') + '<div><label class="block text-sm text-slate-400 mb-1">Yön</label><select data-edit-key="direction" class="edit-entry-field input-dark w-full px-3 py-2 rounded-lg"><option value="iceri"' + (details.direction === 'iceri' ? ' selected' : '') + '>İçeri</option><option value="disari"' + (details.direction === 'disari' ? ' selected' : '') + '>Dışarı</option></select></div>' + editField('Vardiya', 'shift', details.shift || '');
             } else if (entryType === 'loder') {
-                html += editField('Kepçe', 'loader', details.loader || '') + editField('Çalışma saati', 'hours', details.hours || '', 'number') + editField('Cevher kova', 'cevher_kovasi', details.cevher_kovasi || '0', 'number') + editField('Pasa kova', 'pasa_kovasi', details.pasa_kovasi || '0', 'number') + editField('Vardiya', 'shift', details.shift || '');
+                html += editField('Kepçe', 'loader', details.loader || '') + (!details.meter_photo_id && details.hours != null ? editField('Eski kayıt: çalışma saati', 'hours', details.hours, 'number') : '') + editField('Cevher kova', 'cevher_kovasi', details.cevher_kovasi || '0', 'number') + editField('Pasa kova', 'pasa_kovasi', details.pasa_kovasi || '0', 'number') + editField('Vardiya', 'shift', details.shift || '');
+                html += meterPhotoButton(details);
             }
             container.innerHTML = html;
         }
@@ -660,6 +670,7 @@
             document.getElementById('editEntryDate').value = entry.date;
             document.getElementById('editEntryDate').dispatchEvent(new Event('change'));
             document.getElementById('editEntryType').value = entry.entry_type;
+            document.getElementById('editEntryType').disabled = Boolean(entry.details?.meter_photo_id);
             populateEditLocationOptions(entry.location);
             editEntryDetails = { ...(entry.details || {}) };
             renderEditEntryFields();
@@ -672,7 +683,7 @@
             const location = document.getElementById('editEntryLocation').value;
             const entryType = document.getElementById('editEntryType').value;
             if (!date || !location || !entryType) return alert('Tarih, lokasyon ve tip zorunludur.');
-            const details = {};
+            const details = { ...editEntryDetails }; // Preserve grouping and private photo reference.
             document.querySelectorAll('#editEntryFields [data-edit-key]').forEach(field => {
                 if (field.dataset.editKey === 'tavan_row' || field.dataset.editKey === 'tavan_holes') return;
                 details[field.dataset.editKey] = field.value;
@@ -755,6 +766,12 @@
         function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
         function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
         function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
+        function escapeReportText(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+        function meterPhotoButton(details) {
+            const id = details.meter_photo_id;
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id || '')) return '';
+            return '<button type="button" class="text-blue-300 underline py-2" onclick="LoaderPhoto.view(db,\'' + id + '\')">Sayaç fotoğrafını aç · 3 ay saklanır</button>';
+        }
         function formatDetailsHtml(entry) {
             const d = entry.details || {};
             let details;
@@ -771,7 +788,8 @@
             } else if (entry.entry_type === 'material') {
                 details = ['Malzeme: ' + d.name, 'Miktar: ' + d.quantity + ' ' + d.unit, 'Kategori: ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : ''];
             } else if (entry.entry_type === 'loder') {
-                details = ['Kepçe: ' + d.loader, 'Çalışma saati: ' + d.hours];
+                details = ['Kepçe: ' + d.loader];
+                if (!d.meter_photo_id && d.hours != null) details.push('Eski kayıt çalışma saati: ' + d.hours);
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') details.push('Cevher: ' + d.cevher_kovasi + ' kova');
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') details.push('Pasa: ' + d.pasa_kovasi + ' kova');
                 if (d.shift) details.push('Vardiya: ' + shiftLabel(d.shift));
@@ -779,7 +797,7 @@
                 details = formatDetails(entry).split(' | ');
             }
             if (d.description) details.push('Açıklama: ' + d.description);
-            return details.filter(Boolean).map(detail => '<div class="detail-line">' + detail + '</div>').join('');
+            return details.filter(Boolean).map(detail => '<div class="detail-line">' + escapeReportText(detail) + '</div>').join('') + meterPhotoButton(d);
         }
         function formatDetails(entry) {
             const d = entry.details;
@@ -806,7 +824,9 @@
             }
             if (entry.entry_type === 'material') return [d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             if (entry.entry_type === 'loder') {
-                const sonuc = ['Kepce ' + d.loader, d.hours + ' saat'];
+                const sonuc = ['Kepce ' + d.loader];
+                if (d.meter_photo_id) sonuc.push('Sayaç fotoğrafı (3 ay saklanır)');
+                else if (d.hours != null) sonuc.push(d.hours + ' saat (eski kayıt)');
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') sonuc.push('Cevher: ' + d.cevher_kovasi + ' kova');
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') sonuc.push('Pasa: ' + d.pasa_kovasi + ' kova');
                 if (d.shift) sonuc.push(shiftLabel(d.shift));

@@ -1,0 +1,7 @@
+# The portal is intentionally anonymous. Upload validation and budgets live in
+# the submit function. Cleanup additionally requires a private secret from Vault.
+[functions.submit-loader-report]
+verify_jwt = false
+
+[functions.cleanup-loader-photos]
+verify_jwt = false
