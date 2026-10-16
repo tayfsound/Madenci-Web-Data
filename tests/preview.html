@@ -1,7 +1,7 @@
 <!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Form oluşturucu · Yerel önizleme</title><link rel="stylesheet" href="../dynamic-forms.css"><style>body{margin:0;background:#0f172a;padding:24px}main{max-width:1250px;margin:auto}</style></head><body>
 <main><p style="color:#a7b4c7">YEREL TEST · Canlı veritabanına bağlanmaz. Kaydetme/yayımlama kapalıdır.</p><div id="builder"></div></main>
 <script src="../dynamic-forms.js"></script><script src="../form-builder.js"></script><script>
-const records={mf_forms:[],mf_lists:[{id:'test-list',name:'Araçlar',active:true}],mf_items:[{id:'test-item',list_id:'test-list',label:'Kamyon 7',kind:'Kamyon',active:true}]};
+const records={mf_forms:[],mf_available_lists:[{id:'test-list',name:'Araçlar',active:true},{id:'builtin:locations',name:'Lokasyonlar',active:true,builtin:true}],mf_available_items:[{id:'test-item',list_id:'test-list',label:'Kamyon 7',kind:'Kamyon',active:true},{id:'test-location',list_id:'builtin:locations',label:'Ocak 1',kind:'',active:true}]};
 const client={from(table){return {select(){return this;},order(){return Promise.resolve({data:records[table]||[]});},insert(){throw Error('Yerel önizleme: kayıt kapalı');}};}};
 MadenciBuilder.open(client,document.getElementById('builder'));
 </script></body></html>

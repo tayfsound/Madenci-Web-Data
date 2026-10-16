@@ -7,7 +7,10 @@ test('builder: click/drop, group children, condition help, draft save and publis
  const dom=new JSDOM('<div id="builder"></div>',{runScripts:'outside-only',url:'https://test.local'}),w=dom.window,d=w.document;
  w.confirm=()=>true;w.HTMLElement.prototype.scrollIntoView=()=>{};
  for(const file of ['dynamic-forms.js','form-builder.js'])w.eval(fs.readFileSync(file,'utf8'));
- const records={mf_forms:[],mf_drafts:[],mf_lists:[],mf_items:[]};let published=false;
+ const records={mf_forms:[],mf_drafts:[],mf_available_lists:[],mf_available_items:[]};let published=false;
+ records.mf_lists=records.mf_available_lists;records.mf_items=records.mf_available_items;
+ records.mf_lists.push({id:'custom',name:'Araçlar',active:true},{id:'builtin:locations',name:'Lokasyonlar',active:true,builtin:true});
+ records.mf_items.push({id:'item',list_id:'custom',label:'K-1',kind:'Kamyon',active:true});
  const db={from(table){let action='read',payload,filters=[];
    const q={select(){return q;},order(){return q;},eq(k,v){filters.push([k,v]);return q;},insert(data){action='insert';payload=data;return q;},update(data){action='update';payload=data;return q;},single(){return q;},maybeSingle(){return q;},then(resolve,reject){
      try{let data=records[table].filter(r=>filters.every(([k,v])=>r[k]===v));
@@ -19,6 +22,15 @@ test('builder: click/drop, group children, condition help, draft save and publis
  await w.MadenciBuilder.open(db,d.getElementById('builder'));
  const click=text=>{const b=[...d.querySelectorAll('button')].find(b=>b.textContent===text);assert.ok(b,text);b.click();};
  const tick=()=>new Promise(r=>setImmediate(r));
+ click('Seçim listeleri');await tick();
+ assert.match(d.body.textContent,/Admin Panelinden yönetilir/);
+ click('Kaydı kaldır');await tick();assert.equal(records.mf_items[0].active,false);
+ assert.equal([...d.querySelectorAll('button')].some(b=>b.textContent==='Kaydı geri getir'),false);
+ const archived=[...d.querySelectorAll('label')].find(l=>l.textContent.includes('Kaldırılan listeleri')).querySelector('input');
+ archived.checked=true;archived.dispatchEvent(new w.Event('change'));click('Kaydı geri getir');await tick();assert.equal(records.mf_items[0].active,true);
+ click('Listeyi kaldır');await tick();assert.equal(records.mf_lists[0].active,false);
+ click('Listeyi geri getir');await tick();assert.equal(records.mf_lists[0].active,true);
+ click('Formlar');await tick();
  click('＋ Form oluştur');click('＋ Tekrarlanan grup');
  assert.match(d.body.textContent,/satır eklenebilen bölüm/);
  const groupType=[...d.querySelectorAll('label')].find(l=>l.textContent.includes('Gruba eklenecek alan')).querySelector('select');assert.equal(groupType.value,'text');

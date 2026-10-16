@@ -2,7 +2,7 @@
 (function () {
     'use strict';
     const F = MadenciForms, {el, button, labeled, select} = F;
-    let db, host, lists = [], items = [], forms = [], dirty = false, editor = null, busy = false;
+    let db, host, lists = [], items = [], forms = [], dirty = false, editor = null, busy = false, showArchived = false;
     const check = result => { if (result.error) throw Error(result.error.message); return result.data; };
     function message(error) {
         const node = host.querySelector('[role=status]');
@@ -20,8 +20,8 @@
     async function refresh() {
         [forms, lists, items] = await Promise.all([
             db.from('mf_forms').select('*').order('created_at', {ascending:false}).then(check),
-            db.from('mf_lists').select('*').order('name').then(check),
-            db.from('mf_items').select('*').order('label').then(check)
+            db.from('mf_available_lists').select('*').order('name').then(check),
+            db.from('mf_available_items').select('*').order('label').then(check)
         ]);
     }
     function leave() { return !dirty || confirm('Kaydedilmemiş değişiklikler var. Vazgeçilsin mi?'); }
@@ -140,7 +140,8 @@
             const key=f.type==='select'?'options':'units';const opts=el('textarea');opts.value=f[key].join('\n');opts.oninput=()=>{f[key]=opts.value.split('\n').map(v=>v.trim()).filter(Boolean);dirty=true;};settings.append(labeled('Her satıra bir '+(key==='units'?'birim':'seçenek'),opts));
         }
         if(f.type==='lookup'){
-            const list=select([['','Liste seçin'],...lists.filter(l=>l.active).map(l=>[l.id,l.name])],f.listId);list.onchange=()=>{f.listId=list.value;f.kind='';dirty=true;drawEditor();};
+            const list=select([['','Liste seçin'],...lists.filter(l=>l.active).map(l=>[l.id,(l.builtin?'Hazır · ':'Özel · ')+l.name])],f.listId);list.onchange=()=>{f.listId=list.value;f.kind='';dirty=true;drawEditor();};
+            settings.append(el('p','Hazır listeler Admin Panelindeki kayıtlara doğrudan bağlıdır; tekrar kayıt eklemeniz gerekmez. Malzemelerde tür filtresi kategoridir.','mf-muted'));
             const kinds=[...new Set(items.filter(i=>i.list_id===f.listId&&i.active&&i.kind).map(i=>i.kind))];
             const kind=select([['','Bütün türler'],...kinds.map(k=>[k,k])],f.kind||'');kind.onchange=()=>{f.kind=kind.value;dirty=true;};settings.append(labeled('Kaynak liste',list),labeled('Tür filtresi (isteğe bağlı)',kind));
         }
@@ -162,14 +163,21 @@
         frame('lists');
         host.append(el('p','Listeler herkese açık seçim verileridir. Örnek: Araçlar → Loder 3 (Loder), Kamyon 7 (Kamyon). Kişisel veya gizli bilgi eklemeyin.','mf-muted'));
         const name=input();const bar=el('div',undefined,'mf-toolbar');bar.append(labeled('Yeni liste adı',name),button('Liste oluştur',()=>run(async()=>{if(!name.value.trim())throw Error('Liste adı girin');check(await db.from('mf_lists').insert({name:name.value.trim()}));await refresh();drawLists();}),'mf-primary'));host.append(bar);
-        for(const list of lists){
+        const archived=input('','checkbox');archived.checked=showArchived;archived.onchange=()=>{showArchived=archived.checked;drawLists();};host.append(labeled('Kaldırılan listeleri ve kayıtları göster',archived));
+        for(const list of lists.filter(l=>l.active||showArchived)){
             const card=el('div',undefined,'mf-card');card.append(el('h3',list.name+(list.active?'':' · Pasif')));
+            if(list.builtin){
+                card.append(el('p','Hazır liste · Admin Panelinden yönetilir. Değişiklikler bu listeyi kullanan tüm formlara yansır.','mf-muted'));
+                card.append(el('p',items.filter(i=>i.list_id===list.id&&i.active).map(i=>i.label).join(' · ')||'Henüz kayıt yok.'));
+                card.append(button('Admin Panelinde yönet',()=>window.showSection('admin')));
+                host.append(card);continue;
+            }
             const rename=input(list.name);card.append(labeled('Liste adı',rename),button('Adı kaydet',()=>run(async()=>{check(await db.from('mf_lists').update({name:rename.value.trim()}).eq('id',list.id));await refresh();drawLists();})));
-            card.append(button(list.active?'Listeyi pasifleştir':'Listeyi etkinleştir',()=>run(async()=>{if(list.active&&!confirm('Bu listeyi kullanan formlarda yeni seçim yapılamayacak. Devam?'))return;check(await db.from('mf_lists').update({active:!list.active}).eq('id',list.id));await refresh();drawLists();})));
+            card.append(button(list.active?'Listeyi kaldır':'Listeyi geri getir',()=>run(async()=>{if(list.active&&!confirm('Liste arşivlenecek; geçmiş raporlar korunacak. Bu listeyi kullanan formlarda yeni seçim yapılamayacak. Devam?'))return;check(await db.from('mf_lists').update({active:!list.active}).eq('id',list.id));await refresh();drawLists();}),'mf-danger'));
             const label=input(),kind=input();const add=el('div',undefined,'mf-toolbar');add.append(labeled('Kayıt adı / numarası',label),labeled('Tür (örn. Kamyon)',kind),button('Kayıt ekle',()=>run(async()=>{if(!label.value.trim())throw Error('Kayıt adı girin');check(await db.from('mf_items').insert({list_id:list.id,label:label.value.trim(),kind:kind.value.trim()}));await refresh();drawLists();})));card.append(add);
-            for(const item of items.filter(i=>i.list_id===list.id)){
+            for(const item of items.filter(i=>i.list_id===list.id&&(i.active||showArchived))){
                 const row=el('div',undefined,'mf-toolbar'),label=input(item.label),kind=input(item.kind);
-                row.append(labeled('Kayıt',label),labeled('Tür',kind),button('Güncelle',()=>run(async()=>{check(await db.from('mf_items').update({label:label.value.trim(),kind:kind.value.trim()}).eq('id',item.id));await refresh();drawLists();})),button(item.active?'Pasifleştir':'Etkinleştir',()=>run(async()=>{check(await db.from('mf_items').update({active:!item.active}).eq('id',item.id));await refresh();drawLists();})));card.append(row);
+                row.append(labeled('Kayıt',label),labeled('Tür',kind),button('Güncelle',()=>run(async()=>{check(await db.from('mf_items').update({label:label.value.trim(),kind:kind.value.trim()}).eq('id',item.id));await refresh();drawLists();})),button(item.active?'Kaydı kaldır':'Kaydı geri getir',()=>run(async()=>{if(item.active&&!confirm('Kayıt seçimlerden kaldırılacak; geçmiş raporlar korunacak. Devam?'))return;check(await db.from('mf_items').update({active:!item.active}).eq('id',item.id));await refresh();drawLists();}),'mf-danger'));card.append(row);
             }
             host.append(card);
         }

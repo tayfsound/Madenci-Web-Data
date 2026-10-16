@@ -141,7 +141,7 @@
                     if (f.type === 'quantity') { units = select(f.units.map(u => [u,u]), target[f.id]?.unit || f.units[0]); box.append(labeled('Birim', units)); }
                     read = () => {
                         if (input.value === '') return undefined;
-                        if (f.type === 'lookup') { const item = items.find(i => i.id === input.value); return item ? { id: item.id, label: item.label } : undefined; }
+                        if (f.type === 'lookup') { const item = items.find(i => i.id === input.value && i.list_id === f.listId && i.active); return item ? { id: item.id, label: item.label } : undefined; }
                         if (f.type === 'quantity') return { value: Number(input.value), unit: units.value };
                         return f.type === 'number' ? Number(input.value) : input.value;
                     };

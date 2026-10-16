@@ -33,7 +33,11 @@ Tekrarlanan grup, kullanıcıya **Satır ekle / Satırı kaldır** sunar. Örne�
 4. Admin → Formlar → Seçim listeleri → liste ve kayıtları tanımlayın. Sonra Form oluştur → alanları düzenle → Önizle → Taslağı kaydet → Yeni sürümü yayımla.
 5. Portalda yeni raporu doldurup adminin Yeni form raporları bölümünden kontrol edin. Kurulum öncesinde ek formlar için hata/yeniden dene mesajı çıkabilir; eski formlar buna bağımlı değildir.
 
-**Mevcut dört form ve `entries` raporları henüz yeni motora taşınmadı.** Eski formlar ve yönetim listeleri değişmeden çalışır; yeni seçim listeleri ayrı yönetilir, otomatik senkronizasyon yoktur. Mevcut formların özellik eşlemesi ve kontrollü geçişi ayrı bir aşamadır. Eski SQL dosyalarını bu kurulum için yeniden çalıştırmayın.
+**Mevcut dört form ve `entries` raporları henüz yeni motora taşınmadı.** Hazır lokasyon, kategori, malzeme, loder ve delgi tipi listeleri yeni oluşturucudan doğrudan kullanılabilir. `20261016160729_shared_form_catalog.sql` migration'ı web dosyalarından önce uygulanmalıdır. Kayıtlar kopyalanmaz; security-invoker görünümleri mevcut RLS izinleriyle kaynak tabloları okur. “Kayıtlı listeden seçim → Kaynak liste → Hazır” yoluyla seçilir; malzemeler kategoriye göre filtrelenebilir. Hazır listeler mevcut Admin Panelinden yönetilir.
+
+Özel listelerde “Listeyi kaldır” ve “Kaydı kaldır” işlemleri geri alınabilir arşivlemedir. Kaldırılanlar normal listeden ve yeni seçimlerden gizlenir; “Kaldırılan listeleri ve kayıtları göster” ile geri getirilebilir. Geçmiş raporlardaki etiketler korunur. Zorunlu bir listeyi kaldırmadan önce bu listeyi kullanan yayımlanmış formları güncelleyin; aksi halde yeni kayıt tamamlanamaz. Fiziksel silme yapılmaz.
+
+16 Ekim 2026: `shared_form_catalog` migration'ı canlı `cxvrcqkkxfblpxzynfya` projesine CLI SQL sorgusuyla uygulandı; anonim rol ile kaynak liste erişimleri doğrulandı. Migration geçmişine otomatik işlenmediğinden dosyayı yeniden çalıştırmayın; toplu `db push` öncesinde geçmiş eşleştirilmelidir.
 
 Yayımlanan tanımlar değiştirilemez; düzenleme yeni sürüm oluşturur. Kullanıcı eski bir sürümü doldururken form yeniden yayımlanırsa kayıt reddedilir ve yeniden açması istenir. Liste adı/etiketi değişirse geçmiş raporda kayıt anındaki etiket korunur. Listeler ve yayımlanmış form tanımları halka açıktır; yanıtları yalnızca admin okuyabilir. Anonim yazma mevcut portal kullanımına uygundur; yüksek trafikte sunucu tarafı bot/rate-limit koruması ayrıca planlanmalıdır.
 

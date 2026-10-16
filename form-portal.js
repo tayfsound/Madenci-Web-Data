@@ -27,7 +27,7 @@
         try {
             const [v,i]=await Promise.all([
                 client.from('mf_versions').select('*').eq('id',form.current_version_id).single(),
-                client.from('mf_items').select('*').eq('active',true).order('label')
+                client.from('mf_available_items').select('*').eq('active',true).order('label')
             ]);
             if(v.error||i.error)throw v.error||i.error;
             const version=v.data;items=i.data;
