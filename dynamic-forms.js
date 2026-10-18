@@ -162,13 +162,20 @@
             shell.replaceChildren();
             values = clean(def.fields, values);
             const fields = def.fields.filter(f => visible(f, values));
-            index = Math.min(index, fields.length);
-            shell.append(el('h2', def.title), el('p', def.description || ''), el('p', `${index+1} / ${fields.length+1} · ${preview ? 'Önizleme' : 'Rapor girişi'}`, 'mf-muted'));
+            const personal = fields.filter(f => ['first_name','last_name'].includes(f.id));
+            const steps = [];
+            for (const f of fields) {
+                if (personal.includes(f)) { if (f === personal[0]) steps.push(personal); }
+                else steps.push([f]);
+            }
+            index = Math.min(index, steps.length);
+            const current = steps[index];
+            shell.append(el('h2', def.title), el('p', def.description || ''), el('p', `${index+1} / ${steps.length+1} · ${preview ? 'Önizleme' : 'Rapor girişi'}`, 'mf-muted'));
             const content = el('div', undefined, 'mf-card'); shell.append(content);
             let collect = () => {};
-            if (index < fields.length) collect = controls([fields[index]], values, content);
+            if (current) collect = controls(current, values, content);
             else { content.append(el('h3', 'Kontrol et ve kaydet')); summary(content, def.fields, values); }
-            if (!preview && fields[index]?.id === 'last_name') {
+            if (!preview && current?.some(f => f.id === 'last_name')) {
                 const remember = el('input'); remember.type = 'checkbox';
                 remember.checked = localStorage.getItem('madenci_remember_personal_info') === 'true';
                 remember.onchange = () => {
@@ -183,12 +190,12 @@
             const error = el('p', '', 'mf-error'); error.setAttribute('role', 'alert'); shell.append(error);
             const nav = el('div', undefined, 'mf-toolbar'); shell.append(nav);
             nav.append(button(index ? 'Geri' : 'Form türlerine dön', () => { if (busy) return; collect(); if (index) { index--; render(); } else onExit?.(); }));
-            const next = button(index < fields.length ? 'Devam et' : preview ? 'Önizlemeyi tamamla' : 'Kaydet', async () => {
+            const next = button(current ? 'Devam et' : preview ? 'Önizlemeyi tamamla' : 'Kaydet', async () => {
                 if (busy) return;
                 collect();
-                const issue = validate(index < fields.length ? [fields[index]] : def.fields, values, items);
+                const issue = validate(current || def.fields, values, items);
                 if (issue) { error.textContent = issue; content.querySelector('input:not(.hidden),select,textarea')?.focus(); return; }
-                if (index < fields.length) { index++; render(); return; }
+                if (current) { index++; render(); return; }
                 if (preview) { error.textContent = 'Önizleme tamamlandı. Veritabanına kayıt gönderilmedi.'; return; }
                 busy = true; next.disabled = true; next.textContent = 'Kaydediliyor…';
                 nav.querySelectorAll('button').forEach(b => b.disabled = true);
@@ -197,6 +204,10 @@
                 finally { busy = false; next.textContent = 'Kaydet'; nav.querySelectorAll('button').forEach(b => b.disabled = false); }
             }, 'mf-primary'); nav.append(next);
             shell.onkeydown = event => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.isComposing && event.target.autocomplete === 'given-name') {
+                    const last = content.querySelector('input[autocomplete="family-name"]');
+                    if (last) { event.preventDefault(); event.stopPropagation(); last.focus(); return; }
+                }
                 if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !event.altKey && !event.isComposing && event.target.matches('input:not([type="date"])')) { event.preventDefault(); event.stopPropagation(); next.click(); }
             };
             content.querySelector('input:not(.hidden),select,textarea,button')?.focus({preventScroll:true});

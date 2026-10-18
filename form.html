@@ -432,18 +432,18 @@
             const field = (title, id, subtitle) => { const source = document.getElementById(id); if (!source) return null; source.required = true; const box = document.createElement('div'); box.className = 'space-y-2'; const label = document.createElement('label'); label.className = 'block text-sm text-slate-300'; label.textContent = title; box.append(label, source.type === 'date' && source.nextElementSibling?.classList.contains('date-wheel') ? source.nextElementSibling : source); if (subtitle) { const hint = document.createElement('p'); hint.className = 'text-xs text-slate-500'; hint.textContent = subtitle; box.append(hint); } return box; };
             const add = (title, subtitle, body) => { const step = document.createElement('div'); step.className = 'real-wizard-step'; const card = document.createElement('div'); card.className = 'glass rounded-2xl'; card.innerHTML = '<div class="real-wizard-step-title">' + title + '</div><div class="real-wizard-step-subtitle">' + (subtitle || '') + '</div>'; if (body) body.forEach(node => { if (node) card.appendChild(node); }); step.appendChild(card); shell.appendChild(step); steps.push(step); };
             const prefix = type === 'loder' ? 'ld' : type.charAt(0);
-            add('İsim', 'Adınızı girin.', [field('İsim', prefix + '_firstName')]);
-            add('Soyisim', 'Soyadınızı girin.', [field('Soyisim', prefix + '_lastName')]);
+            add('İsim ve soyisim', 'Adınızı ve soyadınızı girin.', [field('İsim', prefix + '_firstName'), field('Soyisim', prefix + '_lastName')]);
             const firstNameInput = document.getElementById(prefix + '_firstName');
             const lastNameInput = document.getElementById(prefix + '_lastName');
-            [firstNameInput, lastNameInput].forEach(input => { if (input) input.setAttribute('autocomplete', 'name'); });
+            firstNameInput?.setAttribute('autocomplete', 'given-name');
+            lastNameInput?.setAttribute('autocomplete', 'family-name');
             const savedFirstName = localStorage.getItem('madenci_saved_first_name') || '';
             const savedLastName = localStorage.getItem('madenci_saved_last_name') || '';
             const rememberPersonalInfo = localStorage.getItem('madenci_remember_personal_info') === 'true';
             if (firstNameInput && !firstNameInput.value) firstNameInput.value = savedFirstName;
             if (lastNameInput && !lastNameInput.value) lastNameInput.value = savedLastName;
             const rememberBox = document.createElement('label'); rememberBox.className = 'mt-4 flex items-center gap-2 text-sm text-slate-400 cursor-pointer'; rememberBox.innerHTML = '<input type="checkbox" class="accent-emerald-500" ' + (rememberPersonalInfo ? 'checked' : '') + '> Bu cihazda isim ve soyisimi hatırla';
-            steps[1].querySelector('.glass').appendChild(rememberBox);
+            steps[0].querySelector('.glass').appendChild(rememberBox);
             const rememberInput = rememberBox.querySelector('input');
             const persistPersonalInfo = () => { if (rememberInput.checked) { localStorage.setItem('madenci_saved_first_name', firstNameInput?.value.trim() || ''); localStorage.setItem('madenci_saved_last_name', lastNameInput?.value.trim() || ''); localStorage.setItem('madenci_remember_personal_info', 'true'); } };
             firstNameInput?.addEventListener('input', persistPersonalInfo); lastNameInput?.addEventListener('input', persistPersonalInfo);
@@ -486,6 +486,10 @@
             const activeForm = document.querySelector('#formScreens:not(.hidden) > div:not(.hidden) .real-wizard');
             if (!activeForm) return;
             event.preventDefault();
+            if (target.autocomplete === 'given-name') {
+                const last = activeForm.querySelector('.is-active input[autocomplete="family-name"]');
+                if (last) { last.focus(); return; }
+            }
             const next = activeForm.querySelector('.real-wizard-footer button.btn-primary:not(.hidden)');
             const save = activeForm.querySelector('button[onclick^="submitEntry"]:not(.hidden)');
             (next || save)?.click();
@@ -628,6 +632,20 @@
             container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-[1fr_1fr_auto] gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span><span></span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
                 '<div class="col-span-2">' + createDrillingField('Toplam metraj (m)', 'number', 'd_tavanTotalMeters', '0') + '</div>';
             addTavanRow(true);
+            const section = document.createElement('div'); section.className = 'col-span-2 space-y-3';
+            const heading = document.createElement('h3'); heading.className = 'text-sm font-medium text-slate-300'; heading.textContent = 'Patlayıcı Kullanımı'; section.appendChild(heading);
+            const category = categories.find(item => normalizeTurkishText(item.name).includes('patlay'));
+            const explosives = category ? (materialsByCategory[category.id] || []) : [];
+            if (!explosives.length) { const hint = document.createElement('p'); hint.className = 'text-sm text-slate-500'; hint.textContent = 'Patlayıcı kategorisinde ürün bulunamadı.'; section.appendChild(hint); }
+            explosives.forEach(material => {
+                const label = document.createElement('label'); label.className = 'grid grid-cols-2 gap-3 items-center text-sm text-slate-300';
+                const name = document.createElement('span'); name.textContent = material.name;
+                const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.step = 'any'; input.placeholder = 'Miktar';
+                input.className = 'd-tavan-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl';
+                input.dataset.materialId = material.id; input.dataset.materialName = material.name;
+                label.append(name, input); section.appendChild(label);
+            });
+            container.appendChild(section);
         }
 
         function addTavanRow(isInitialRow = false) {
@@ -748,6 +766,9 @@
                     const holeInputs = Array.from(document.querySelectorAll('.d-tavan-holes'));
                     data.details.holes = rowInputs.map((input, index) => ({ row: input.value, hole_count: holeInputs[index].value })).filter(item => item.row || item.hole_count);
                     data.details.total_meters = document.getElementById('d_tavanTotalMeters').value;
+                    const explosiveInputs = Array.from(document.querySelectorAll('.d-tavan-explosive-qty'));
+                    if (explosiveInputs.some(input => !input.checkValidity())) { alert('Patlayıcı miktarı negatif olmayan bir sayı olmalı.'); return; }
+                    data.details.explosives = explosiveInputs.filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
                     if (!data.details.holes.length || data.details.holes.some(item => !item.row || !item.hole_count)) { alert('En az bir tam sıra ve delik sayısı girin.'); return; }
                     if (!data.details.total_meters) { alert('Toplam metraj girin.'); return; }
                 } else {

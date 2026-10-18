@@ -25,8 +25,10 @@ test('wizard: one card, required fields, Enter, back, group removal and save',as
  const click=text=>[...d.querySelectorAll('button')].find(b=>b.textContent===text).click();
  click('Devam et');assert.match(d.querySelector('[role=alert]').textContent,/İsim/);
  d.querySelector('input').value='Ali';d.querySelector('input').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
- assert.equal(d.querySelector('input').autocomplete,'family-name');d.querySelector('input').value='Test';click('Devam et');
- click('Geri');assert.equal(d.querySelector('input').value,'Test');click('Devam et');click('Devam et');
+ assert.equal(d.activeElement.autocomplete,'family-name');
+ click('Devam et');assert.match(d.querySelector('[role=alert]').textContent,/Soyisim/);
+ d.querySelector('input[autocomplete="family-name"]').value='Test';click('Devam et');
+ click('Geri');assert.equal(d.querySelector('input[autocomplete="family-name"]').value,'Test');assert.equal(d.querySelector('input[autocomplete="given-name"]').value,'Ali');click('Devam et');click('Devam et');
  assert.equal(d.querySelectorAll('input[type=number]').length,1);
  click('＋ Satır ekle');assert.equal(d.querySelectorAll('input[type=number]').length,2);click('Satırı kaldır');assert.equal(d.querySelectorAll('input[type=number]').length,1);
  click('Devam et');assert.match(d.querySelector('[role=alert]').textContent,/Miktar/);
@@ -40,7 +42,13 @@ test('existing four forms still build and Ayna validation remains required',()=>
  w.scrollTo=()=>{};w.supabase={createClient:()=>({})};w.MadenciPortal={init(){},reload(){}};
  w.eval(fs.readFileSync('loader-photo.js','utf8'));
  w.eval([...d.scripts].find(s=>s.textContent.includes('const SUPABASE_URL')).textContent.replace(/\s*initApp\(\);\s*$/,''));
- for(const type of ['drilling','material','ore','loder']){w.openForm(type);const shell=d.querySelector('#form-'+type+' .real-wizard');assert.ok(shell);assert.equal(shell.querySelectorAll('.is-active').length,1);w.showSelection();}
+ for(const type of ['drilling','material','ore','loder']){
+  w.openForm(type);const shell=d.querySelector('#form-'+type+' .real-wizard');assert.ok(shell);assert.equal(shell.querySelectorAll('.is-active').length,1);
+  const step=shell.querySelector('.is-active'),first=step.querySelector('[autocomplete="given-name"]'),last=step.querySelector('[autocomplete="family-name"]');
+  assert.ok(first);assert.ok(last);first.value='Ali';assert.equal(w.validateWizardStep(step),false);last.value='Test';assert.equal(w.validateWizardStep(step),true);
+  first.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));assert.equal(d.activeElement,last);
+  w.showSelection();
+ }
  w.openForm('drilling');w.renderAynaFields(d.getElementById('d_dynamicFields'));
  const step=d.getElementById('d_dynamicFields').closest('.real-wizard-step');assert.equal(w.validateWizardStep(step),false);
  d.querySelector('.d-ayna-material-type').value='cevher';assert.equal(w.validateWizardStep(step),true);w.addAynaRow();assert.equal(w.validateWizardStep(step),false);

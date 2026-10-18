@@ -781,6 +781,7 @@
             } else if (entry.entry_type === 'drilling' && String(d.drilling_type || '').toLocaleLowerCase('tr-TR') === 'tavan') {
                 details = (Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik') : []);
                 if (d.total_meters) details.push('Toplam: ' + d.total_meters + ' m');
+                if (Array.isArray(d.explosives)) d.explosives.forEach(item => details.push('Patlayıcı · ' + item.name + ': ' + item.quantity));
             } else if (entry.entry_type === 'drilling' && String(d.drilling_type || '').toLocaleLowerCase('tr-TR') === 'ayna') {
                 details = [];
                 const reports = Array.isArray(d.ayna_reports) && d.ayna_reports.length ? d.ayna_reports : [{ material_type: d.material_type, explosives: d.explosives }];
@@ -810,7 +811,8 @@
                 }
                 if (d.drilling_type.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const holes = Array.isArray(d.holes) ? d.holes.map(item => 'Sıra ' + item.row + ': ' + item.hole_count + ' delik').join(' | ') : '';
-                    return [holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
+                    const explosives = Array.isArray(d.explosives) ? d.explosives.map(item => item.name + ': ' + item.quantity).join(', ') : '';
+                    return [holes, d.total_meters ? 'Toplam: ' + d.total_meters + ' m' : '', explosives ? 'Patlayıcı: ' + explosives : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
                 }
                 let alanlar = [];
                 if (tip && Array.isArray(tip.fields)) {
