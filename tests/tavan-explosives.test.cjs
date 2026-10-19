@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const {JSDOM}=require('jsdom');
 
-test('Tavan optional explosives: render, validate and save with location; admin and export display',async()=>{
+test('Drilling excludes explosives; material report requires blast context; history remains readable',async()=>{
  const dom=new JSDOM(fs.readFileSync('form.html','utf8'),{runScripts:'outside-only',url:'https://test.local'});
  const w=dom.window,d=w.document;let saved=null;const alerts=[];
  w.scrollTo=()=>{};w.alert=message=>alerts.push(message);
@@ -18,14 +18,17 @@ test('Tavan optional explosives: render, validate and save with location; admin 
  w.renderTavanFields(d.getElementById('d_dynamicFields'));
  d.getElementById('d_firstName').value='Ali';d.getElementById('d_lastName').value='Test';d.getElementById('d_date').value='2026-10-18';
  d.querySelector('.d-tavan-row').value='1';d.querySelector('.d-tavan-holes').value='4';d.getElementById('d_tavanTotalMeters').value='12';
- const inputs=d.querySelectorAll('.d-tavan-explosive-qty');assert.equal(inputs.length,2);assert.equal(inputs[0].required,false);
- inputs[0].value='-1';await w.submitEntry('drilling');assert.equal(saved,null);assert.match(alerts.at(-1),/negatif/);
- inputs[0].value='2.5';await w.submitEntry('drilling');
+ assert.equal(d.querySelectorAll('.d-tavan-explosive-qty').length,0);await w.submitEntry('drilling');
  assert.ok(saved);assert.equal(saved[0].location,'Ocak 1');assert.equal(saved[0].details.total_meters,'12');
- assert.deepEqual(JSON.parse(JSON.stringify(saved[0].details.explosives)),[{material_id:'dynex',name:'Dynex',quantity:'2.5'}]);
- d.getElementById('d_firstName').value='Ali';d.getElementById('d_lastName').value='Test';
- d.querySelector('.d-tavan-row').value='1';d.querySelector('.d-tavan-holes').value='4';d.getElementById('d_tavanTotalMeters').value='12';
- inputs[0].value='';await w.submitEntry('drilling');assert.equal(saved[0].details.explosives.length,0);
+ assert.equal(saved[0].details.explosives,undefined);
+ w.renderAynaFields(d.getElementById('d_dynamicFields'));assert.equal(d.querySelectorAll('.d-ayna-explosive-qty').length,0);
+ w.openForm('material');d.getElementById('m_firstName').value='Veli';d.getElementById('m_lastName').value='Test';d.getElementById('m_date').value='2026-10-19';
+ const row=d.querySelector('.material-row');row.querySelector('.m-cat').value='explosives';row.querySelector('.m-cat').dispatchEvent(new w.Event('change'));
+ row.querySelector('.m-name').value='dynex';row.querySelector('.m-qty').value='2.5';
+ saved=null;await w.submitEntry('material');assert.equal(saved,null);assert.match(alerts.at(-1),/lokasyon/);
+ row.querySelector('.m-blast-type').value='tavan';
+ const loc=d.createElement('option');loc.value='Ocak 1';loc.textContent='Ocak 1';row.querySelector('.m-blast-location').append(loc);row.querySelector('.m-blast-location').value='Ocak 1';
+ await w.submitEntry('material');assert.equal(saved[0].location,'Ocak 1');assert.equal(saved[0].details.blasting_type,'tavan');assert.equal(saved[0].details.first_name,'Veli');
  dom.window.close();
  const admin=new JSDOM('',{runScripts:'outside-only'}),a=admin.window;
  const source=fs.readFileSync('admin.html','utf8');

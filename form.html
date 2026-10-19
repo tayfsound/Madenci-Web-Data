@@ -607,18 +607,14 @@
         }
 
         function renderAynaFields(container) {
-            const explosiveCategory = categories.find(category => normalizeTurkishText(category.name).includes('patlay'));
-            const explosives = explosiveCategory ? (materialsByCategory[explosiveCategory.id] || []) : [];
             container.innerHTML = '<div id="d_aynaRows" class="col-span-2 space-y-3"></div><button type="button" onclick="addAynaRow()" class="col-span-2 w-full py-2.5 rounded-xl border border-yellow-500/50 text-yellow-300 hover:bg-yellow-500/10 text-sm"><i class="fas fa-plus mr-1"></i>Ayna Raporu Ekle</button>';
-            container.dataset.explosives = JSON.stringify(explosives);
             addAynaRow();
         }
 
         function addAynaRow() {
             const container = document.getElementById('d_aynaRows'); if (!container) return;
-            const explosives = JSON.parse(document.getElementById('d_dynamicFields').dataset.explosives || '[]');
             const row = document.createElement('div'); row.className = 'ayna-report-row rounded-xl border border-slate-700/70 border-l-4 border-l-yellow-500 p-3';
-            row.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="text-sm font-medium text-yellow-300">Ayna Raporu</label><button type="button" class="remove-ayna-row text-red-400 hover:text-red-300 text-sm" title="Raporu kaldır"><i class="fas fa-trash"></i></button></div><label class="block text-xs text-slate-400 mb-1.5">Malzeme tipi</label><select required aria-label="Malzeme tipi" class="d-ayna-material-type input-dark w-full px-3 py-2.5 rounded-xl mb-3"><option value="">Seç</option><option value="cevher">Cevher</option><option value="patar">Pasa</option></select><label class="block text-xs text-slate-400 mb-2">Patlayıcı Kullanımı</label><div class="d-ayna-explosives space-y-2">' + (explosives.length ? explosives.map(material => '<div class="grid grid-cols-2 gap-3 items-center"><label class="text-sm text-slate-300">' + material.name + '</label><input type="number" min="0" step="any" class="d-ayna-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl" data-material-id="' + material.id + '" data-material-name="' + material.name + '" placeholder="Miktar"></div>').join('') : '<p class="text-sm text-slate-500">Patlayıcı kategorisinde ürün bulunamadı.</p>') + '</div>';
+            row.innerHTML = '<div class="flex items-center justify-between mb-3"><label class="text-sm font-medium text-yellow-300">Ayna Raporu</label><button type="button" class="remove-ayna-row text-red-400 hover:text-red-300 text-sm" title="Raporu kaldır"><i class="fas fa-trash"></i></button></div><label class="block text-xs text-slate-400 mb-1.5">Malzeme tipi</label><select required aria-label="Malzeme tipi" class="d-ayna-material-type input-dark w-full px-3 py-2.5 rounded-xl mb-3"><option value="">Seç</option><option value="cevher">Cevher</option><option value="patar">Pasa</option></select>';
             row.querySelector('.remove-ayna-row').addEventListener('click', () => { if (container.children.length > 1) { row.remove(); updateAynaRemoveButtons(); } });
             container.appendChild(row); updateAynaRemoveButtons();
         }
@@ -632,20 +628,6 @@
             container.innerHTML = '<div class="col-span-2"><label class="block text-xs text-slate-400 mb-2">Delik Bilgileri</label><div class="grid grid-cols-[1fr_1fr_auto] gap-3 text-xs text-slate-400 mb-2"><span>Sıra numarası</span><span>Delik sayısı</span><span></span></div><div id="d_tavanRows" class="space-y-2"></div><button type="button" onclick="addTavanRow()" class="mt-3 text-sm text-blue-400 hover:text-blue-300"><i class="fas fa-plus mr-1"></i>Satır Ekle</button></div>' +
                 '<div class="col-span-2">' + createDrillingField('Toplam metraj (m)', 'number', 'd_tavanTotalMeters', '0') + '</div>';
             addTavanRow(true);
-            const section = document.createElement('div'); section.className = 'col-span-2 space-y-3';
-            const heading = document.createElement('h3'); heading.className = 'text-sm font-medium text-slate-300'; heading.textContent = 'Patlayıcı Kullanımı'; section.appendChild(heading);
-            const category = categories.find(item => normalizeTurkishText(item.name).includes('patlay'));
-            const explosives = category ? (materialsByCategory[category.id] || []) : [];
-            if (!explosives.length) { const hint = document.createElement('p'); hint.className = 'text-sm text-slate-500'; hint.textContent = 'Patlayıcı kategorisinde ürün bulunamadı.'; section.appendChild(hint); }
-            explosives.forEach(material => {
-                const label = document.createElement('label'); label.className = 'grid grid-cols-2 gap-3 items-center text-sm text-slate-300';
-                const name = document.createElement('span'); name.textContent = material.name;
-                const input = document.createElement('input'); input.type = 'number'; input.min = '0'; input.step = 'any'; input.placeholder = 'Miktar';
-                input.className = 'd-tavan-explosive-qty input-dark w-full px-3 py-2.5 rounded-xl';
-                input.dataset.materialId = material.id; input.dataset.materialName = material.name;
-                label.append(name, input); section.appendChild(label);
-            });
-            container.appendChild(section);
         }
 
         function addTavanRow(isInitialRow = false) {
@@ -708,6 +690,9 @@
         function isOilMaterial(categoryName, materialName) { const text = normalizeTurkishText((categoryName || '') + ' ' + (materialName || '')); return /yag|yağ|gres|lubr/.test(text); }
         function updateMaterialDestinationFields(row) {
             const catSel = row.querySelector('.m-cat'), matSel = row.querySelector('.m-name'), loader = row.querySelector('.m-loader');
+            const explosive = normalizeTurkishText(catSel.options[catSel.selectedIndex]?.text || '').includes('patlay');
+            row.querySelector('.m-blast').classList.toggle('hidden', !explosive);
+            row.querySelectorAll('.m-blast select').forEach(input => { input.required = explosive; input.disabled = !explosive; if (!explosive) input.value = ''; });
             const selectedMaterial = matSel.options[matSel.selectedIndex]; const requiresLoader = selectedMaterial?.dataset.requiresLoader === 'true'; loader.required = requiresLoader; loader.classList.remove('hidden'); row.querySelector('.m-loader-label').classList.remove('hidden'); row.querySelector('.m-loader-label').textContent = requiresLoader ? 'Loder (zorunlu)' : 'Loder (isteğe bağlı)';
         }
         function addMaterialRow(data) {
@@ -715,6 +700,9 @@
             row.className = 'material-row grid grid-cols-1 sm:grid-cols-12 gap-2 items-center';
             row.innerHTML = '<select class="m-cat input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Kategori</option></select><select class="m-name input-dark sm:col-span-3 px-2 py-2 rounded-lg text-sm"><option value="">Malzeme</option></select><input type="number" class="m-qty input-dark sm:col-span-2 px-2 py-2 rounded-lg text-sm" placeholder="Miktar"><select aria-label="Birim" class="m-unit input-dark sm:col-span-1 px-1 py-2 rounded-lg text-sm"><option value="adet">Adet</option><option value="kg">Kilogram (kg)</option><option value="lt">Litre (lt)</option><option value="mt">Metre (mt)</option></select><div class="sm:col-span-2"><label class="m-loader-label hidden block text-[10px] text-orange-300 mb-1">Loder</label><select class="m-loader input-dark hidden w-full px-1 py-2 rounded-lg text-sm"><option value="">Loder no</option></select></div><button type="button" class="text-red-400 hover:text-red-300 text-center"><i class="fas fa-times"></i></button>';
             const catSel = row.querySelector('.m-cat');
+            const blast = document.createElement('div'); blast.className = 'm-blast hidden sm:col-span-12 grid grid-cols-1 sm:grid-cols-2 gap-3';
+            blast.innerHTML = '<label>Patlayıcı nerede kullanıldı?<select class="m-blast-type input-dark w-full px-3 py-2 rounded-lg"><option value="">Seçin</option><option value="ayna">Ayna</option><option value="tavan">Tavan</option></select></label><label>Lokasyon<select class="m-blast-location input-dark w-full px-3 py-2 rounded-lg"><option value="">Seçin</option></select></label>';
+            row.appendChild(blast); fillOreLocationSelect(row.querySelector('.m-blast-location'));
             const matSel = row.querySelector('.m-name');
             categories.forEach(cat => { const o = document.createElement('option'); o.value = cat.id; o.textContent = cat.name; catSel.appendChild(o); });
             const loaderSel = row.querySelector('.m-loader'); loaders.forEach(loader => { const o = document.createElement('option'); o.value = loader.id; o.textContent = loader.name; loaderSel.appendChild(o); });
@@ -756,19 +744,15 @@
                 data.details = { ...reporter, drilling_type_id: tip.id, drilling_type: tip.name };
                 data.details.description = document.getElementById('d_description').value.trim();
                 if (tip.name.toLocaleLowerCase('tr-TR') === 'ayna') {
-                    const reports = Array.from(document.querySelectorAll('#d_aynaRows .ayna-report-row')).map(row => ({ material_type: row.querySelector('.d-ayna-material-type').value, explosives: Array.from(row.querySelectorAll('.d-ayna-explosive-qty')).filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value })) }));
+                    const reports = Array.from(document.querySelectorAll('#d_aynaRows .ayna-report-row')).map(row => ({ material_type: row.querySelector('.d-ayna-material-type').value }));
                     if (!reports.length || reports.some(report => !report.material_type)) { alert('Her Ayna raporu için Cevher veya Pasa seçin.'); return; }
                     data.details.ayna_reports = reports;
                     data.details.material_type = reports[0].material_type;
-                    data.details.explosives = reports[0].explosives;
                 } else if (tip.name.toLocaleLowerCase('tr-TR') === 'tavan') {
                     const rowInputs = Array.from(document.querySelectorAll('.d-tavan-row'));
                     const holeInputs = Array.from(document.querySelectorAll('.d-tavan-holes'));
                     data.details.holes = rowInputs.map((input, index) => ({ row: input.value, hole_count: holeInputs[index].value })).filter(item => item.row || item.hole_count);
                     data.details.total_meters = document.getElementById('d_tavanTotalMeters').value;
-                    const explosiveInputs = Array.from(document.querySelectorAll('.d-tavan-explosive-qty'));
-                    if (explosiveInputs.some(input => !input.checkValidity())) { alert('Patlayıcı miktarı negatif olmayan bir sayı olmalı.'); return; }
-                    data.details.explosives = explosiveInputs.filter(input => input.value.trim() !== '').map(input => ({ material_id: input.dataset.materialId, name: input.dataset.materialName, quantity: input.value }));
                     if (!data.details.holes.length || data.details.holes.some(item => !item.row || !item.hole_count)) { alert('En az bir tam sıra ve delik sayısı girin.'); return; }
                     if (!data.details.total_meters) { alert('Toplam metraj girin.'); return; }
                 } else {
@@ -784,7 +768,11 @@
                     const loaderSel = row.querySelector('.m-loader');
                     if (!catSel.value || !matSel.value || !qty.value.trim()) continue;
                     const categoryName = catSel.options[catSel.selectedIndex].text, materialName = matSel.options[matSel.selectedIndex].text;
-                    payload.push({ date: data.date, entry_type: 'material', location: data.location, details: { ...reporter, description: document.getElementById('m_description').value.trim(), category: categoryName, category_id: catSel.value, name: materialName, material_id: matSel.value, quantity: qty.value, unit: unit.value, loader_id: loaderSel.value || '', loader: loaderSel.value ? loaderSel.options[loaderSel.selectedIndex].text : '' } });
+                    const explosive = normalizeTurkishText(categoryName).includes('patlay');
+                    const blastType = row.querySelector('.m-blast-type').value, blastLocation = row.querySelector('.m-blast-location').value;
+                    if (explosive && (!['ayna','tavan'].includes(blastType) || !blastLocation)) { alert('Patlayıcı için Ayna/Tavan ve lokasyon seçin.'); return; }
+                    if (!Number.isFinite(Number(qty.value)) || Number(qty.value) < 0) { alert('Miktar negatif olmayan bir sayı olmalı.'); return; }
+                    payload.push({ date: data.date, entry_type: 'material', location: explosive ? blastLocation : data.location, details: { ...reporter, ...(explosive ? { blasting_type: blastType } : {}), description: document.getElementById('m_description').value.trim(), category: categoryName, category_id: catSel.value, name: materialName, material_id: matSel.value, quantity: qty.value, unit: unit.value, loader_id: loaderSel.value || '', loader: loaderSel.value ? loaderSel.options[loaderSel.selectedIndex].text : '' } });
                 }
                 if (payload.length === 0) { alert('En az bir malzeme kalemi girin.'); return; }
                 const { error } = await db.from('entries').insert(payload);

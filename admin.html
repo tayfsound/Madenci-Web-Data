@@ -798,6 +798,7 @@
                 details = formatDetails(entry).split(' | ');
             }
             if (d.description) details.push('Açıklama: ' + d.description);
+            if (entry.entry_type === 'material' && d.blasting_type) details.push('Patlatma: ' + (d.blasting_type === 'ayna' ? 'Ayna' : 'Tavan'));
             return details.filter(Boolean).map(detail => '<div class="detail-line">' + escapeReportText(detail) + '</div>').join('') + meterPhotoButton(d);
         }
         function formatDetails(entry) {
@@ -824,7 +825,7 @@
                 alanlar.forEach(alan => { if (d[alan.key] !== undefined && d[alan.key] !== '') { parcalar.push(alan.label + ': ' + d[alan.key]); } });
                 return parcalar.join(' | ');
             }
-            if (entry.entry_type === 'material') return [d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
+            if (entry.entry_type === 'material') return [d.blasting_type ? 'Patlatma: ' + (d.blasting_type === 'ayna' ? 'Ayna' : 'Tavan') : '', d.name + ': ' + d.quantity + ' ' + d.unit + ' | ' + d.category, d.destination ? 'Kullanım yeri: ' + d.destination : '', d.loader ? 'Loder: ' + d.loader : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             if (entry.entry_type === 'loder') {
                 const sonuc = ['Kepce ' + d.loader];
                 if (d.meter_photo_id) sonuc.push('Sayaç fotoğrafı (3 ay saklanır)');
@@ -854,8 +855,29 @@
                 const span = document.createElement('span'); span.textContent = cat.name;
                 const btn = document.createElement('button'); btn.className = 'text-red-400 hover:text-red-300'; btn.innerHTML = '<i class="fas fa-trash-alt"></i>';
                 btn.addEventListener('click', () => deleteCategory(cat.id));
-                item.appendChild(span); item.appendChild(btn); div.appendChild(item);
+                const edit = document.createElement('button'); edit.type = 'button'; edit.className = 'text-blue-300 hover:text-blue-200 px-2'; edit.textContent = 'Düzenle';
+                edit.addEventListener('click', () => renameCategory(cat.id, cat.name, edit));
+                const actions = document.createElement('div'); actions.className = 'flex items-center gap-3'; actions.append(edit, btn);
+                item.append(span, actions); div.appendChild(item);
             });
+        }
+        async function renameCategory(id, oldName, button) {
+            const value = prompt('Yeni kategori adı:', oldName);
+            if (value === null) return;
+            const name = value.trim();
+            if (!name || name.length > 120) return alert('Kategori adı 1–120 karakter olmalı.');
+            if (name === oldName) return;
+            if (oldName.toLocaleLowerCase('tr-TR').includes('patlay') && !name.toLocaleLowerCase('tr-TR').includes('patlay') && !confirm('Patlayıcı girişindeki Ayna/Tavan ve lokasyon alanları kategori adındaki “patlay” ifadesiyle açılıyor. Bu adla artık açılmayacak. Devam edilsin mi?')) return;
+            button.disabled = true;
+            try {
+                const { data, error } = await db.from('categories').update({ name }).eq('id', id).eq('name', oldName).select('id');
+                if (error) throw Error(error.code === '23505' ? 'Bu isimde bir kategori zaten var.' : error.message);
+                if (!data?.length) throw Error('Kategori güncellenemedi. Yetkinizi kontrol edin veya listeyi yenileyin.');
+                document.querySelectorAll('#materialCategorySelect option').forEach(option => { if (option.value === id) option.textContent = name; });
+                await loadCategoriesAndMaterials();
+                await loadCategoriesList();
+            } catch (error) { alert('Kategori adı değiştirilemedi: ' + error.message); }
+            finally { button.disabled = false; }
         }
         async function addCategory() {
             const name = document.getElementById('newCategoryName').value.trim();
