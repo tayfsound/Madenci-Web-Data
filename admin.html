@@ -180,7 +180,7 @@
                         <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option></select></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Delgi</option><option value="material">Malzeme</option><option value="ore">Lokomotif</option><option value="loder">Loder</option><option value="production">Günlük Üretim</option></select></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Delgi</option><option value="material">Malzeme</option><option value="ore">Lokomotif</option><option value="loder">Loder</option><option value="production">Tahkimat</option></select></div>
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select id="adminDrillingType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm delgi tipleri</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Kategori</label><select id="adminCategory" onchange="populateAdminMaterialFilter()" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm kategoriler</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Malzeme</label><select id="adminMaterial" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm malzemeler</option></select></div>
@@ -778,7 +778,7 @@
             });
             return groups;
         }
-        function getTypeLabel(type) { return { drilling: 'Delgi', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder', production: 'Günlük Üretim' }[type] || type; }
+        function getTypeLabel(type) { return { drilling: 'Delgi', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder', production: 'Tahkimat' }[type] || type; }
         function getReportTypeLabel(entry) {
             if (entry.entry_type === 'drilling' && entry.details && entry.details.drilling_type) return entry.details.drilling_type;
             return getTypeLabel(entry.entry_type);

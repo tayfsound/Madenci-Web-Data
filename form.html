@@ -123,8 +123,8 @@
                 <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-cyan-500/10 flex items-center justify-center">
                     <i class="fas fa-chart-line text-2xl text-cyan-400"></i>
                 </div>
-                <div class="font-semibold text-sm sm:text-base">Günlük Üretim</div>
-                <div class="text-xs text-slate-500 mt-1">Üretim ve saha işleri</div>
+                <div class="font-semibold text-sm sm:text-base">Tahkimat</div>
+                <div class="text-xs text-slate-500 mt-1">Tahkimat ve ray işleri</div>
             </button>
         </div>
     </div>
@@ -245,7 +245,7 @@
             <div class="glass rounded-2xl p-5 sm:p-6">
                 <div class="flex items-center gap-3 mb-5">
                     <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center"><i class="fas fa-chart-line text-cyan-400"></i></div>
-                    <div><h3 class="font-bold text-lg">Günlük Üretim</h3><p class="text-xs text-slate-400">Aynı çalışma alanında yaptığınız iş kalemlerini birlikte girin.</p></div>
+                    <div><h3 class="font-bold text-lg">Tahkimat</h3><p class="text-xs text-slate-400">Aynı çalışma alanında yaptığınız tahkimat işlerini birlikte girin.</p></div>
                 </div>
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-3">
@@ -263,21 +263,16 @@
                             <label class="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" class="p-topic accent-cyan-500" value="wood_cutting" data-topic-label="Wood Cutting"> Wood Cutting / Ağaç işi</label>
                             <label class="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" class="p-topic accent-cyan-500" value="ground_support" data-topic-label="Ground Support"> Ground Support / İksa</label>
                             <label class="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" class="p-topic accent-cyan-500" value="rail_works" data-topic-label="Rail Works"> Rail Works / Ray işi</label>
-                            <label class="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" class="p-topic accent-cyan-500" value="transportation_buckets" data-topic-label="Transportation Buckets"> Transportation Buckets / Kova</label>
-                            <label class="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" class="p-topic accent-cyan-500" value="long_hole_drill" data-topic-label="Long Hole Drill"> Long Hole Drill / Uzun delgi</label>
                         </div>
                     </div>
                     <div class="rounded-xl border border-slate-700 p-4 space-y-4">
                         <div><h4 class="font-semibold text-cyan-300">İş kalemleri</h4><p class="text-xs text-slate-500 mt-1">Sadece bugün yaptığınız kalemlere miktar girin.</p></div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <label class="block text-xs text-slate-400" data-topic-field="long_hole_drill">Long Hole Drill (metre)<input id="p_longHoleMeters" data-production-topic="long_hole_drill" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Metre"></label>
                             <label class="block text-xs text-slate-400" data-topic-field="wood_cutting">Wood Cutting (basket)<input id="p_woodCutting" data-production-topic="wood_cutting" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Sepet"></label>
                             <label class="block text-xs text-slate-400" data-topic-field="ground_support">Ground Support - kurulum (adet)<input id="p_groundInstalled" data-production-topic="ground_support" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="İksa kurulum"></label>
                             <label class="block text-xs text-slate-400" data-topic-field="ground_support">Ground Support - söküm (adet)<input id="p_groundUninstalled" data-production-topic="ground_support" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="İksa söküm"></label>
                             <label class="block text-xs text-slate-400" data-topic-field="rail_works">Rail Works - kurulum (m)<input id="p_railInstalled" data-production-topic="rail_works" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Ray kurulum"></label>
                             <label class="block text-xs text-slate-400" data-topic-field="rail_works">Rail Works - söküm (m)<input id="p_railUninstalled" data-production-topic="rail_works" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Ray söküm"></label>
-                            <label class="block text-xs text-slate-400" data-topic-field="transportation_buckets">Transportation Buckets - cevher<input id="p_bucketOre" data-production-topic="transportation_buckets" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Cevher kovası"></label>
-                            <label class="block text-xs text-slate-400" data-topic-field="transportation_buckets">Transportation Buckets - pasa<input id="p_bucketWaste" data-production-topic="transportation_buckets" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Pasa kovası"></label>
                         </div>
                     </div>
                     <textarea id="p_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili açıklama (isteğe bağlı)"></textarea>
@@ -537,16 +532,13 @@
                 add('Çalışma alanı', 'Excel’deki Work Location alanı.', [field('Çalışma alanı', 'p_location')]);
                 add('İş konuları', 'Yaptığınız bir veya birden fazla konuyu seçin.', [document.getElementById('p_topicSelector')]);
                 add('İş kalemleri', 'Sadece yaptığınız kalemlere miktar girin.', [
-                    field('Long Hole Drill (metre)', 'p_longHoleMeters'),
                     field('Wood Cutting (basket)', 'p_woodCutting'),
                     field('Ground Support - kurulum (adet)', 'p_groundInstalled'),
                     field('Ground Support - söküm (adet)', 'p_groundUninstalled'),
                     field('Rail Works - kurulum (m)', 'p_railInstalled'),
-                    field('Rail Works - söküm (m)', 'p_railUninstalled'),
-                    field('Transportation Buckets - cevher', 'p_bucketOre'),
-                    field('Transportation Buckets - pasa', 'p_bucketWaste')
+                    field('Rail Works - söküm (m)', 'p_railUninstalled')
                 ]);
-                ['p_longHoleMeters','p_woodCutting','p_groundInstalled','p_groundUninstalled','p_railInstalled','p_railUninstalled','p_bucketOre','p_bucketWaste'].forEach(id => { document.getElementById(id).required = false; });
+                ['p_woodCutting','p_groundInstalled','p_groundUninstalled','p_railInstalled','p_railUninstalled'].forEach(id => { document.getElementById(id).required = false; });
                 document.querySelectorAll('#form-production .p-topic').forEach(input => input.addEventListener('change', updateProductionTopicFields));
                 updateProductionTopicFields();
             }
@@ -846,14 +838,11 @@
                 const date = document.getElementById('p_date').value;
                 const location = document.getElementById('p_location').value;
                 const fieldMap = {
-                    long_hole_drill_meters: 'p_longHoleMeters',
                     wood_cutting_baskets: 'p_woodCutting',
                     ground_support_installed: 'p_groundInstalled',
                     ground_support_uninstalled: 'p_groundUninstalled',
                     rail_installed_m: 'p_railInstalled',
-                    rail_uninstalled_m: 'p_railUninstalled',
-                    transportation_buckets_ore: 'p_bucketOre',
-                    transportation_buckets_waste: 'p_bucketWaste'
+                    rail_uninstalled_m: 'p_railUninstalled'
                 };
                 const selectedTopics = Array.from(document.querySelectorAll('#form-production .p-topic:checked'));
                 if (!selectedTopics.length) { alert('En az bir iş konusu seçin.'); return; }
