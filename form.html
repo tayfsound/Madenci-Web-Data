@@ -529,7 +529,7 @@
                 if (!loaderPhoto) loaderPhoto = LoaderPhoto.mount(photoHost);
                 add('Vardiya sonu sayaç fotoğrafı', 'Tek fotoğraf yükleyin. Saat girişi veya hesaplama yapılmaz.', [photoHost]);
             } else if (type === 'production') {
-                add('Çalışma alanı', 'Excel’deki Work Location alanı.', [field('Çalışma alanı', 'p_location')]);
+                add('Çalışma alanı', '', [field('Çalışma alanı', 'p_location')]);
                 add('İş konuları', 'Yaptığınız bir veya birden fazla konuyu seçin.', [document.getElementById('p_topicSelector')]);
                 add('İş kalemleri', 'Sadece yaptığınız kalemlere miktar girin.', [
                     field('Wood Cutting (basket)', 'p_woodCutting'),
