@@ -816,7 +816,7 @@
                 if (d.shift) details.push('Vardiya: ' + shiftLabel(d.shift));
             } else if (entry.entry_type === 'production') {
                 details = [d.activity_type ? 'İş: ' + d.activity_type : ''];
-                const labels = { long_hole_drill_meters: 'Long Hole Drill', wood_cutting_baskets: 'Wood Cutting', ground_support_installed: 'Ground Support kurulum', ground_support_uninstalled: 'Ground Support söküm', rail_installed_m: 'Rail Works kurulum', rail_uninstalled_m: 'Rail Works söküm', transportation_buckets_ore: 'Transportation Buckets cevher', transportation_buckets_waste: 'Transportation Buckets pasa' };
+                const labels = { long_hole_drill_meters: 'Uzun delgi', wood_cutting_baskets: 'Ağaç', ground_support_installed: 'İksa kurulumu', ground_support_uninstalled: 'İksa sökümü', rail_installed_m: 'Ray kurulumu', rail_uninstalled_m: 'Ray sökümü', transportation_buckets_ore: 'Cevher kovası', transportation_buckets_waste: 'Pasa kovası' };
                 Object.entries(d.measures || {}).forEach(([key, value]) => details.push((labels[key] || key) + ': ' + value));
             } else {
                 details = formatDetails(entry).split(' | ');
@@ -861,7 +861,7 @@
                 return sonuc.join(' | ');
             }
             if (entry.entry_type === 'production') {
-                const labels = { long_hole_drill_meters: 'Long Hole Drill', wood_cutting_baskets: 'Wood Cutting', ground_support_installed: 'Ground Support kurulum', ground_support_uninstalled: 'Ground Support söküm', rail_installed_m: 'Rail Works kurulum', rail_uninstalled_m: 'Rail Works söküm', transportation_buckets_ore: 'Transportation Buckets cevher', transportation_buckets_waste: 'Transportation Buckets pasa' };
+                const labels = { long_hole_drill_meters: 'Uzun delgi', wood_cutting_baskets: 'Ağaç', ground_support_installed: 'İksa kurulumu', ground_support_uninstalled: 'İksa sökümü', rail_installed_m: 'Ray kurulumu', rail_uninstalled_m: 'Ray sökümü', transportation_buckets_ore: 'Cevher kovası', transportation_buckets_waste: 'Pasa kovası' };
                 return [(d.activity_type ? 'İş: ' + d.activity_type : ''), ...Object.entries(d.measures || {}).map(([key, value]) => (labels[key] || key) + ': ' + value), d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             }
             if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [oreTypeLabel(d.type), d.quantity, yon, d.shift ? shiftLabel(d.shift) : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | '); }
