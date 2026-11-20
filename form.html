@@ -532,11 +532,11 @@
                 add('Çalışma alanı', '', [field('Çalışma alanı', 'p_location')]);
                 add('İş konuları', 'Yaptığınız bir veya birden fazla konuyu seçin.', [document.getElementById('p_topicSelector')]);
                 add('İş kalemleri', 'Sadece yaptığınız kalemlere miktar girin.', [
-                    field('Wood Cutting (basket)', 'p_woodCutting'),
-                    field('Ground Support - kurulum (adet)', 'p_groundInstalled'),
-                    field('Ground Support - söküm (adet)', 'p_groundUninstalled'),
-                    field('Rail Works - kurulum (m)', 'p_railInstalled'),
-                    field('Rail Works - söküm (m)', 'p_railUninstalled')
+                    field('Ağaç (sepet)', 'p_woodCutting'),
+                    field('İksa kurulumu (adet)', 'p_groundInstalled'),
+                    field('İksa sökümü (adet)', 'p_groundUninstalled'),
+                    field('Ray kurulumu (m)', 'p_railInstalled'),
+                    field('Ray sökümü (m)', 'p_railUninstalled')
                 ]);
                 ['p_woodCutting','p_groundInstalled','p_groundUninstalled','p_railInstalled','p_railUninstalled'].forEach(id => { document.getElementById(id).required = false; });
                 document.querySelectorAll('#form-production .p-topic').forEach(input => input.addEventListener('change', updateProductionTopicFields));
