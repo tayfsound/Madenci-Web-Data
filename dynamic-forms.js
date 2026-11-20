@@ -2,6 +2,7 @@
 (function (root) {
     'use strict';
     const types = { text: 'Metin', textarea: 'Uzun metin', number: 'Sayı', quantity: 'Miktar ve birim', date: 'Tarih', select: 'Seçenekler', lookup: 'Kayıtlı listeden seçim', group: 'Tekrarlanan grup' };
+    const workerText = value => String(value ?? '').replace(/\bAlimak\b/gi, 'Kuyu');
     const clone = value => JSON.parse(JSON.stringify(value));
     const uid = () => 'f_' + crypto.randomUUID().replaceAll('-', '');
     const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
@@ -58,13 +59,13 @@
         for (const f of fields) {
             if (!visible(f, values)) continue;
             const v = values[f.id], empty = v === undefined || v === null || v === '';
-            if (empty) { if (f.required) return `${f.label} zorunlu.`; continue; }
-            if (['text','textarea'].includes(f.type) && (typeof v !== 'string' || v.length > 4000 || (f.required && !v.trim()))) return `${f.label}: Geçerli bir metin girin.`;
-            if (f.type === 'number' && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) return `${f.label}: Negatif olmayan bir sayı girin.`;
+            if (empty) { if (f.required) return `${workerText(f.label)} zorunlu.`; continue; }
+            if (['text','textarea'].includes(f.type) && (typeof v !== 'string' || v.length > 4000 || (f.required && !v.trim()))) return `${workerText(f.label)}: Geçerli bir metin girin.`;
+            if (f.type === 'number' && (typeof v !== 'number' || !Number.isFinite(v) || v < 0)) return `${workerText(f.label)}: Negatif olmayan bir sayı girin.`;
             if (f.type === 'quantity' && (typeof v.value !== 'number' || !Number.isFinite(v.value) || v.value < 0 || !f.units.includes(v.unit))) return `${f.label}: Miktar ve birim seçin.`;
-            if (f.type === 'select' && !f.options.includes(v)) return `${f.label}: Bir seçenek seçin.`;
+            if (f.type === 'select' && !f.options.includes(v)) return `${workerText(f.label)}: Bir seçenek seçin.`;
             if (f.type === 'date' && (!/^\d{4}-\d{2}-\d{2}$/.test(v) || Number.isNaN(Date.parse(v)) || new Date(v).toISOString().slice(0,10) !== v)) return `${f.label}: Geçerli bir tarih seçin.`;
-            if (f.type === 'lookup' && !items.some(i => i.id === v.id && i.label === v.label && i.list_id === f.listId && i.active && (!f.kind || i.kind === f.kind))) return `${f.label}: Aktif bir kayıt seçin.`;
+            if (f.type === 'lookup' && !items.some(i => i.id === v.id && i.label === v.label && i.list_id === f.listId && i.active && (!f.kind || i.kind === f.kind))) return `${workerText(f.label)}: Aktif bir kayıt seçin.`;
             if (f.type === 'group') {
                 if (!Array.isArray(v) || v.length > 50 || (f.required && !v.length)) return `${f.label}: En az bir satır ekleyin (en fazla 50).`;
                 for (const row of v) { const error = validate(f.fields, row, items); if (error) return error; }
@@ -80,9 +81,9 @@
         for (const f of fields) {
             if (!visible(f, values)) continue;
             const v = values[f.id];
-            const box = el('div', undefined, 'mf-answer'); box.append(el('strong', f.label));
+            const box = el('div', undefined, 'mf-answer'); box.append(el('strong', workerText(f.label)));
             if (f.type === 'group' && Array.isArray(v)) v.forEach((row, i) => { const group = el('div', undefined, 'mf-card'); group.append(el('h4', `Satır ${i+1}`)); summary(group, f.fields, row); box.append(group); });
-            else box.append(el('p', v == null || v === '' ? '—' : f.type === 'lookup' ? v.label : f.type === 'quantity' ? `${v.value} ${v.unit}` : String(v)));
+            else box.append(el('p', v == null || v === '' ? '—' : f.type === 'lookup' ? workerText(v.label) : f.type === 'quantity' ? `${v.value} ${v.unit}` : workerText(v)));
             host.append(box);
         }
     }
@@ -101,7 +102,7 @@
             const readers = [];
             for (const f of fields) {
                 const box = el('div', undefined, 'mf-field'); parent.append(box);
-                const title = f.label + (f.required ? ' *' : '');
+                const title = workerText(f.label) + (f.required ? ' *' : '');
                 let read;
                 if (f.type === 'group') {
                     box.append(el('h3', title));
@@ -122,7 +123,7 @@
                 } else {
                     let input;
                     if (f.type === 'select' || f.type === 'lookup') {
-                        const opts = f.type === 'select' ? f.options.map(o => [o,o]) : items.filter(i => i.list_id === f.listId && i.active && (!f.kind || i.kind === f.kind)).map(i => [i.id,i.label]);
+                        const opts = f.type === 'select' ? f.options.map(o => [o,workerText(o)]) : items.filter(i => i.list_id === f.listId && i.active && (!f.kind || i.kind === f.kind)).map(i => [i.id,workerText(i.label)]);
                         input = select([['','Seçin'], ...opts], f.type === 'lookup' ? target[f.id]?.id || '' : target[f.id] || '');
                         if (!opts.length) box.append(el('p', 'Bu alan için aktif seçenek yok. Yönetici listeye kayıt eklemeli.', 'mf-error'));
                     } else {
@@ -170,7 +171,7 @@
             }
             index = Math.min(index, steps.length);
             const current = steps[index];
-            shell.append(el('h2', def.title), el('p', def.description || ''), el('p', `${index+1} / ${steps.length+1} · ${preview ? 'Önizleme' : 'Rapor girişi'}`, 'mf-muted'));
+            shell.append(el('h2', workerText(def.title)), el('p', workerText(def.description || '')), el('p', `${index+1} / ${steps.length+1} · ${preview ? 'Önizleme' : 'Rapor girişi'}`, 'mf-muted'));
             const content = el('div', undefined, 'mf-card'); shell.append(content);
             let collect = () => {};
             if (current) collect = controls(current, values, content);

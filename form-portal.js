@@ -1,6 +1,7 @@
 (function () {
     'use strict';
     const F = MadenciForms;
+    const workerText = value => String(value ?? '').replace(/\bAlimak\b/gi, 'Kuyu');
     let client, portal, screen, items = [], generation = 0, opening = false;
     async function load() {
         const token = ++generation;
@@ -12,7 +13,7 @@
             portal.replaceChildren();
             if(!result.data.length)return;
             portal.append(F.el('h3','Diğer raporlar'));
-            for(const form of result.data)portal.append(F.button(form.name,()=>open(form),'mf-card'));
+            for(const form of result.data)portal.append(F.button(workerText(form.name),()=>open(form),'mf-card'));
         } catch(e) {
             if(token!==generation)return;
             portal.replaceChildren(F.el('p','Ek formlar şu anda yüklenemedi. Mevcut dört form kullanılabilir.','mf-muted'),F.button('Yeniden dene',load));
