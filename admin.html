@@ -180,7 +180,7 @@
                         <div><label class="block text-sm text-slate-400 mb-1">Baslangic Tarihi</label><input type="date" id="adminStartDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Bitis Tarihi</label><input type="date" id="adminEndDate" class="input-dark w-full px-3 py-2 rounded-lg text-sm"></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Lokasyon</label><select id="adminLoc" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option></select></div>
-                        <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Delgi</option><option value="material">Malzeme</option><option value="ore">Lokomotif</option><option value="loder">Loder</option></select></div>
+                        <div><label class="block text-sm text-slate-400 mb-1">Tip</label><select id="adminType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tumu</option><option value="drilling">Delgi</option><option value="material">Malzeme</option><option value="ore">Lokomotif</option><option value="loder">Loder</option><option value="production">Günlük Üretim</option></select></div>
                         <div class="lg:col-span-2"><label class="block text-sm text-slate-400 mb-1">Delgi Tipi</label><select id="adminDrillingType" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm delgi tipleri</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Kategori</label><select id="adminCategory" onchange="populateAdminMaterialFilter()" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm kategoriler</option></select></div>
                         <div><label class="block text-sm text-slate-400 mb-1">Malzeme</label><select id="adminMaterial" class="input-dark w-full px-3 py-2 rounded-lg text-sm"><option value="">Tüm malzemeler</option></select></div>
@@ -722,6 +722,26 @@
             })));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Raporlar');
+            const productionRows = currentAdminData.filter(e => e.entry_type === 'production').map(e => {
+                const d = e.details || {}, m = d.measures || {};
+                return {
+                    'Date': e.date,
+                    'Work Location': e.location,
+                    'Drill/Blast Type': d.activity_type || '',
+                    'Material (Ore/Waste)': '',
+                    'Long Hole Drill (Meter)': m.long_hole_drill_meters ?? '',
+                    'Wood Cutting (Basket)': m.wood_cutting_baskets ?? '',
+                    'Ground Support (Installed Steel Arch)': m.ground_support_installed ?? '',
+                    'Ground Support (Uninstalled Steel Arch)': m.ground_support_uninstalled ?? '',
+                    'Rail Works (Installed Rail m)': m.rail_installed_m ?? '',
+                    'Rail Works (Uninstalled Rail m)': m.rail_uninstalled_m ?? '',
+                    'Transportation (Buckets - Ore)': m.transportation_buckets_ore ?? '',
+                    'Transportation (Buckets - Waste)': m.transportation_buckets_waste ?? '',
+                    'Reporter': getReporterName(e),
+                    'Description': d.description || ''
+                };
+            });
+            if (productionRows.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(productionRows), 'Production');
             XLSX.writeFile(wb, 'raporlar_' + new Date().toISOString().split('T')[0] + '.xlsx');
         }
         function exportPDF() {
@@ -758,14 +778,14 @@
             });
             return groups;
         }
-        function getTypeLabel(type) { return { drilling: 'Delgi', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder' }[type] || type; }
+        function getTypeLabel(type) { return { drilling: 'Delgi', material: 'Malzeme', ore: 'Lokomotif', loder: 'Loder', production: 'Günlük Üretim' }[type] || type; }
         function getReportTypeLabel(entry) {
             if (entry.entry_type === 'drilling' && entry.details && entry.details.drilling_type) return entry.details.drilling_type;
             return getTypeLabel(entry.entry_type);
         }
         function oreTypeLabel(t) { return { cevher: 'Cevher', pasa: 'Pasa' }[t] || t; }
         function shiftLabel(s) { return { gunduz: 'Gunduz', gece: 'Gece' }[s] || s; }
-        function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500' }[type] || 'border-slate-500'; }
+        function getBorderColor(type) { return { drilling: 'border-green-500', material: 'border-blue-500', ore: 'border-yellow-500', loder: 'border-purple-500', production: 'border-cyan-500' }[type] || 'border-slate-500'; }
         function escapeReportText(value) { return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
         function meterPhotoButton(details) {
             const id = details.meter_photo_id;
@@ -794,6 +814,10 @@
                 if (d.cevher_kovasi && d.cevher_kovasi !== '0') details.push('Cevher: ' + d.cevher_kovasi + ' kova');
                 if (d.pasa_kovasi && d.pasa_kovasi !== '0') details.push('Pasa: ' + d.pasa_kovasi + ' kova');
                 if (d.shift) details.push('Vardiya: ' + shiftLabel(d.shift));
+            } else if (entry.entry_type === 'production') {
+                details = [d.activity_type ? 'İş: ' + d.activity_type : ''];
+                const labels = { long_hole_drill_meters: 'Long Hole Drill', wood_cutting_baskets: 'Wood Cutting', ground_support_installed: 'Ground Support kurulum', ground_support_uninstalled: 'Ground Support söküm', rail_installed_m: 'Rail Works kurulum', rail_uninstalled_m: 'Rail Works söküm', transportation_buckets_ore: 'Transportation Buckets cevher', transportation_buckets_waste: 'Transportation Buckets pasa' };
+                Object.entries(d.measures || {}).forEach(([key, value]) => details.push((labels[key] || key) + ': ' + value));
             } else {
                 details = formatDetails(entry).split(' | ');
             }
@@ -835,6 +859,10 @@
                 if (d.shift) sonuc.push(shiftLabel(d.shift));
                 if (d.description) sonuc.push('Açıklama: ' + d.description);
                 return sonuc.join(' | ');
+            }
+            if (entry.entry_type === 'production') {
+                const labels = { long_hole_drill_meters: 'Long Hole Drill', wood_cutting_baskets: 'Wood Cutting', ground_support_installed: 'Ground Support kurulum', ground_support_uninstalled: 'Ground Support söküm', rail_installed_m: 'Rail Works kurulum', rail_uninstalled_m: 'Rail Works söküm', transportation_buckets_ore: 'Transportation Buckets cevher', transportation_buckets_waste: 'Transportation Buckets pasa' };
+                return [(d.activity_type ? 'İş: ' + d.activity_type : ''), ...Object.entries(d.measures || {}).map(([key, value]) => (labels[key] || key) + ': ' + value), d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | ');
             }
             if (entry.entry_type === 'ore') { const yon = d.direction === 'iceri' ? 'Iceri' : 'Disari'; return [oreTypeLabel(d.type), d.quantity, yon, d.shift ? shiftLabel(d.shift) : '', d.description ? 'Açıklama: ' + d.description : ''].filter(Boolean).join(' | '); }
             return JSON.stringify(d);

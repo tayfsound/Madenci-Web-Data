@@ -119,6 +119,13 @@
                 <div class="font-semibold text-sm sm:text-base">Loder Calısması</div>
                 <div class="text-xs text-slate-500 mt-1">Kepce operasyonu</div>
             </button>
+            <button onclick="openForm('production')" class="card-select glass rounded-2xl p-5 sm:p-6 text-center hover:border-cyan-500/50 hover:bg-slate-800/60">
+                <div class="w-14 h-14 mx-auto mb-3 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-2xl text-cyan-400"></i>
+                </div>
+                <div class="font-semibold text-sm sm:text-base">Günlük Üretim</div>
+                <div class="text-xs text-slate-500 mt-1">Üretim ve saha işleri</div>
+            </button>
         </div>
     </div>
 
@@ -230,6 +237,42 @@
                     <textarea id="ld_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili manuel açıklama (isteğe bağlı)"></textarea>
                 </div>
                 <button onclick="submitEntry('loder')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
+            </div>
+        </div>
+
+        <!-- Daily production form: one report, multiple Excel topics -->
+        <div id="form-production" class="hidden">
+            <div class="glass rounded-2xl p-5 sm:p-6">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center"><i class="fas fa-chart-line text-cyan-400"></i></div>
+                    <div><h3 class="font-bold text-lg">Günlük Üretim</h3><p class="text-xs text-slate-400">Aynı çalışma alanında yaptığınız iş kalemlerini birlikte girin.</p></div>
+                </div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">İsim</label><input type="text" id="p_firstName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Soyisim</label><input type="text" id="p_lastName" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Tarih</label><input type="date" id="p_date" class="input-dark w-full px-3 py-2.5 rounded-xl" required></div>
+                        <div><label class="block text-xs text-slate-400 mb-1.5">Çalışma alanı</label><select id="p_location" class="input-dark w-full px-3 py-2.5 rounded-xl" required><option value="">Seç</option></select></div>
+                    </div>
+                    <div><label class="block text-xs text-slate-400 mb-1.5">İş / delgi tipi (isteğe bağlı)</label><select id="p_activity" class="input-dark w-full px-3 py-2.5 rounded-xl"><option value="">Seç</option><option>Full Face</option><option>Selection</option><option>Patar</option><option>Roof Blasting (Ploča)</option><option>Long Hole Drilling (BBC)</option><option>Alimak</option></select></div>
+                    <div class="rounded-xl border border-slate-700 p-4 space-y-4">
+                        <div><h4 class="font-semibold text-cyan-300">İş kalemleri</h4><p class="text-xs text-slate-500 mt-1">Sadece bugün yaptığınız kalemlere miktar girin.</p></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="block text-xs text-slate-400">Long Hole Drill (metre)<input id="p_longHoleMeters" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Boş bırakılabilir"></label>
+                            <label class="block text-xs text-slate-400">Wood Cutting (basket)<input id="p_woodCutting" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Boş bırakılabilir"></label>
+                            <label class="block text-xs text-slate-400">Ground Support - kurulum (adet)<input id="p_groundInstalled" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Çelik bağ kurulum"></label>
+                            <label class="block text-xs text-slate-400">Ground Support - söküm (adet)<input id="p_groundUninstalled" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Çelik bağ söküm"></label>
+                            <label class="block text-xs text-slate-400">Rail Works - kurulum (m)<input id="p_railInstalled" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Ray döşeme"></label>
+                            <label class="block text-xs text-slate-400">Rail Works - söküm (m)<input id="p_railUninstalled" type="number" min="0" step="any" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Ray söküm"></label>
+                            <label class="block text-xs text-slate-400">Transportation Buckets - cevher<input id="p_bucketOre" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Kova"></label>
+                            <label class="block text-xs text-slate-400">Transportation Buckets - pasa<input id="p_bucketWaste" type="number" min="0" step="1" class="input-dark w-full mt-1 px-3 py-2.5 rounded-xl" placeholder="Kova"></label>
+                        </div>
+                    </div>
+                    <textarea id="p_description" class="input-dark w-full px-3 py-2.5 rounded-xl min-h-24" placeholder="Bu raporla ilgili açıklama (isteğe bağlı)"></textarea>
+                </div>
+                <button onclick="submitEntry('production')" class="btn-primary w-full mt-5 py-3.5 rounded-xl font-semibold text-sm hover:opacity-90 transition"><i class="fas fa-save mr-2"></i>Kaydet</button>
             </div>
         </div>
     </div>
@@ -370,7 +413,7 @@
             document.getElementById('selectionScreen').classList.remove('hidden');
             document.getElementById('formScreens').classList.add('hidden');
             document.getElementById('successScreen').classList.add('hidden');
-            ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
+            ['drilling','material','ore','loder','production'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
             document.getElementById('d_type').value = '';
             document.getElementById('d_dynamicFields').innerHTML = '';
             document.getElementById('d_typeHint').textContent = 'Delgi tipini secince o tipe ait alanlar acılır.';
@@ -381,7 +424,7 @@
             document.getElementById('selectionScreen').classList.add('hidden');
             document.getElementById('formScreens').classList.remove('hidden');
             document.getElementById('successScreen').classList.add('hidden');
-            ['drilling','material','ore','loder'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
+            ['drilling','material','ore','loder','production'].forEach(t => document.getElementById('form-' + t).classList.add('hidden'));
             document.getElementById('form-' + type).classList.remove('hidden');
             document.querySelectorAll('#form-' + type + ' input[type="date"]').forEach(el => { el.value = getTodayDate(); el.dispatchEvent(new Event('change')); });
             if (type === 'ore' && !document.querySelector('#oreLocationGroups .ore-location-group')) addOreLocationGroup();
@@ -465,6 +508,21 @@
                 const photoHost = document.getElementById('ld_meterPhoto');
                 if (!loaderPhoto) loaderPhoto = LoaderPhoto.mount(photoHost);
                 add('Vardiya sonu sayaç fotoğrafı', 'Tek fotoğraf yükleyin. Saat girişi veya hesaplama yapılmaz.', [photoHost]);
+            } else if (type === 'production') {
+                add('Çalışma alanı', 'Excel’deki Work Location alanı.', [field('Çalışma alanı', 'p_location')]);
+                add('İş / delgi tipi', 'Yaptığınız ana işi seçin; miktarları sonraki adımda girin.', [field('İş / delgi tipi', 'p_activity')]);
+                add('İş kalemleri', 'Sadece yaptığınız kalemlere miktar girin.', [
+                    field('Long Hole Drill (metre)', 'p_longHoleMeters'),
+                    field('Wood Cutting (basket)', 'p_woodCutting'),
+                    field('Ground Support - kurulum (adet)', 'p_groundInstalled'),
+                    field('Ground Support - söküm (adet)', 'p_groundUninstalled'),
+                    field('Rail Works - kurulum (m)', 'p_railInstalled'),
+                    field('Rail Works - söküm (m)', 'p_railUninstalled'),
+                    field('Transportation Buckets - cevher', 'p_bucketOre'),
+                    field('Transportation Buckets - pasa', 'p_bucketWaste')
+                ]);
+                document.getElementById('p_activity').required = false;
+                ['p_longHoleMeters','p_woodCutting','p_groundInstalled','p_groundUninstalled','p_railInstalled','p_railUninstalled','p_bucketOre','p_bucketWaste'].forEach(id => { document.getElementById(id).required = false; });
             }
             document.getElementById(prefix + '_description').required = false;
             const footer = document.createElement('div'); footer.className = 'real-wizard-footer'; const back = document.createElement('button'); back.type = 'button'; back.className = 'wizard-back'; back.textContent = 'Geri'; const next = document.createElement('button'); next.type = 'button'; next.className = 'btn-primary'; next.textContent = 'Devam Et'; footer.append(back,next); shell.appendChild(footer); form.querySelector('.glass').appendChild(shell); shell.appendChild(submit);
@@ -506,7 +564,7 @@
             const { data: locs } = await db.from('locations').select('*').order('name');
             if (locs) {
                 locations = locs;
-                ['d_location','o_location'].forEach(id => {
+                ['d_location','o_location','p_location'].forEach(id => {
                     const sel = document.getElementById(id);
                     if (sel) { sel.innerHTML = '<option value="">Sec</option>'; locs.forEach(l => { const o = document.createElement('option'); o.value = l.name; o.textContent = l.name; sel.appendChild(o); }); }
                 });
@@ -758,6 +816,30 @@
                 } else {
                     document.querySelectorAll('#d_dynamicFields [data-alan]').forEach(el => { if (el.value.trim() !== '') data.details[el.dataset.alan] = el.value; });
                 }
+            } else if (type === 'production') {
+                const date = document.getElementById('p_date').value;
+                const location = document.getElementById('p_location').value;
+                const fieldMap = {
+                    long_hole_drill_meters: 'p_longHoleMeters',
+                    wood_cutting_baskets: 'p_woodCutting',
+                    ground_support_installed: 'p_groundInstalled',
+                    ground_support_uninstalled: 'p_groundUninstalled',
+                    rail_installed_m: 'p_railInstalled',
+                    rail_uninstalled_m: 'p_railUninstalled',
+                    transportation_buckets_ore: 'p_bucketOre',
+                    transportation_buckets_waste: 'p_bucketWaste'
+                };
+                const measures = {};
+                Object.entries(fieldMap).forEach(([key, id]) => {
+                    const value = document.getElementById(id).value.trim();
+                    if (value !== '') measures[key] = Number(value);
+                });
+                if (!date || !location || !Object.keys(measures).length) { alert('Tarih, çalışma alanı ve en az bir iş kalemi zorunludur.'); return; }
+                if (Object.values(measures).some(value => !Number.isFinite(value) || value < 0)) { alert('Miktarlar negatif olmayan sayılar olmalı.'); return; }
+                const { error } = await db.from('entries').insert([{ date, entry_type: 'production', location, details: { ...reporter, activity_type: document.getElementById('p_activity').value, measures, description: document.getElementById('p_description').value.trim() } }]);
+                if (error) alert('Hata: ' + error.message);
+                else { document.querySelectorAll('#form-production input[type="number"]').forEach(input => { input.value = ''; }); document.getElementById('p_activity').value = ''; showSuccess(type); }
+                return;
             } else if (type === 'material') {
                 data.date = document.getElementById('m_date').value;
                 data.location = 'Genel';
